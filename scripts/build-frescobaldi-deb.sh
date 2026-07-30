@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v2.2-Corregido)
-# v2.2: Corrige el error de formato en el archivo Packages del repo APT
+# build-frescobaldi-deb.sh (v2.3-Final)
+# v2.3: Corrige la falta del ejecutable en /usr/bin copiándolo desde la raíz del fuente
 #===============================================================================
 set -euo pipefail
 
@@ -177,8 +177,18 @@ override_dh_auto_build:
 	python3 -m build --wheel
 
 override_dh_auto_install:
+	# 1. Instalar la biblioteca Python
 	python3 -m pip install --target=debian/frescobaldi/usr/lib/python3/dist-packages --no-deps dist/*.whl
+	
+	# 2. ¡CORRECCIÓN! Copiar el script ejecutable a /usr/bin
+	mkdir -p debian/frescobaldi/usr/bin
+	cp $(CURDIR)/frescobaldi debian/frescobaldi/usr/bin/frescobaldi
+	chmod +x debian/frescobaldi/usr/bin/frescobaldi
+	
+	# 3. Optimización: Poda de localizaciones
 	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app/locale -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
+	
+	# 4. Optimización: Bytecode Python sin docstrings (-OO)
 	python3 -OO -m compileall debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app
 	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app -name "*.py" -delete || true
 
@@ -192,7 +202,7 @@ cat <<EOF > "$PROJECT_DIR/debian/changelog"
 frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
 
   * Custom optimized build from upstream tag ${VER_GIT}.
-  * PyQt6, locale pruning, and Python -OO bytecode optimization.
+  * PyQt6, locale pruning, Python -OO bytecode optimization, and fixed /usr/bin executable.
 
  -- Manuel Mateos <manuel@mateos.dev>  ${FECHA}
 EOF
@@ -246,7 +256,7 @@ if [[ "$PUBLISH" == true ]]; then
 fi
 
 #===============================================================================
-# INTEGRACIÓN CON REPOSITORIO APT (CORREGIDO)
+# INTEGRACIÓN CON REPOSITORIO APT
 #===============================================================================
 header "📦 INTEGRANDO CON REPOSITORIO APT"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -280,16 +290,12 @@ dpkg-scanpackages --multiversion pool /dev/null > dists/alpha/main/binary-amd64/
 gzip -9cn dists/alpha/main/binary-amd64/Packages > dists/alpha/main/binary-amd64/Packages.gz
 
 log "📋 Generando rama stable (solo versiones estables)..."
-# CORRECCIÓN CRÍTICA: Usar \n\s*\n para separar por bloques de paquetes, no por líneas
 python3 << 'PYEOF'
 import re
 with open('dists/alpha/main/binary-amd64/Packages', 'r') as f:
     content = f.read()
-
-# Separar por líneas en blanco (formato estándar de Debian)
 blocks = re.split(r'\n\s*\n', content.strip())
 stable_blocks = []
-
 for block in blocks:
     if not block.strip():
         continue
@@ -298,13 +304,11 @@ for block in blocks:
         filename = filename_match.group(1).strip()
         if 'alpha' not in filename and 'beta' not in filename and 'rc' not in filename:
             stable_blocks.append(block)
-
 with open('dists/stable/main/binary-amd64/Packages', 'w') as f:
     if stable_blocks:
         f.write('\n\n'.join(stable_blocks) + '\n\n')
     else:
         f.write('\n')
-        
 print(f"✅ Generado Packages stable con {len(stable_blocks)} paquete(s)")
 PYEOF
 
@@ -356,7 +360,7 @@ cat > pool/update.json << 'EOF'
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: correct Packages file formatting for APT repository" || log "ℹ️ No hay cambios para commitear"
+git commit -m "fix: add executable to /usr/bin and correct APT repo formatting" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
 git checkout main
