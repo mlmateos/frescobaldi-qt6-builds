@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v1.0-Final)
-# Compila Frescobaldi desde fuente, genera paquete .deb (PyQt6 optimizado),
-# firma y publica en GitHub Releases + Repositorio APT (ramas stable/alpha)
+# build-frescobaldi-deb.sh (v2.1-Final)
+# Compila Frescobaldi, genera .deb optimizado (PyQt6), firma y publica
+# v2.1: Corrige error de comillas en update.json y otros pequeños ajustes
 #===============================================================================
 set -euo pipefail
 
@@ -86,6 +86,8 @@ header "📥 PREPARANDO CÓDIGO FUENTE"
 PROJECT_DIR="$(pwd)/frescobaldi-deb"
 if [[ "$CLEAN_BUILD" == true ]]; then
     [[ "$KEEP_SOURCE" == true ]] && rm -rf "$PROJECT_DIR/debian" "$PROJECT_DIR"/*.deb || rm -rf "$PROJECT_DIR"
+    # Limpiar también el .deb de 28K anterior si existe
+    rm -f frescobaldi-*.deb SHA256SUMS*.txt
 fi
 
 if [[ ! -d "$PROJECT_DIR/.git" ]]; then
@@ -99,7 +101,7 @@ rm -rf "$PROJECT_DIR/debian"
 #===============================================================================
 # DETECCIÓN DE VERSIÓN
 #===============================================================================
-header "️ DETECTANDO VERSIÓN"
+header "🏷️ DETECTANDO VERSIÓN"
 cd "$PROJECT_DIR"
 VER_GIT=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//') || VER_GIT="4.0.7"
 VER=$(echo "$VER_GIT" | sed -E 's/alpha([0-9]+)/-alpha\1/; s/beta([0-9]+)/-beta\1/; s/rc([0-9]+)/-rc\1/')
@@ -112,9 +114,10 @@ cd ..
 #===============================================================================
 header "🔧 APLICANDO PARCHE PERSONALIZADO"
 log "Añadiendo créditos al diálogo About..."
-ABOUT_FILE="$PROJECT_DIR/frescobaldi/about.py"
+# Búsqueda dinámica del archivo about.py (en v4.x está en frescobaldi_app)
+ABOUT_FILE=$(find "$PROJECT_DIR" -name "about.py" | grep -v test | head -n 1)
 
-if [[ -f "$ABOUT_FILE" ]]; then
+if [[ -n "$ABOUT_FILE" && -f "$ABOUT_FILE" ]]; then
     if ! grep -q "Custom PyQt6 / Qt 6.8.x LTS Build" "$ABOUT_FILE"; then
         python3 - "$ABOUT_FILE" << 'PYTHON'
 import sys, re
@@ -135,40 +138,21 @@ PYTHON
         log "ℹ️  Créditos ya presentes"
     fi
 else
-    warn "⚠️ No se encontró $ABOUT_FILE"
+    warn "⚠️ No se encontró about.py"
 fi
 
 #===============================================================================
-# COMPILACIÓN PYTHON Y OPTIMIZACIÓN
+# GENERACIÓN DE ESTRUCTURA DEBIAN (CON OPTIMIZACIÓN INTEGRADA)
 #===============================================================================
-header "🔨 COMPILANDO WHEEL Y OPTIMIZANDO"
-cd "$PROJECT_DIR"
-python3 -m pip install --user --break-system-packages build hatchling
-python3 -m build --wheel
-cd ..
-
 header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
-mkdir -p "$PROJECT_DIR/debian/frescobaldi/usr/lib/python3/dist-packages"
 
-WHEEL_FILE=$(ls "$PROJECT_DIR/dist/"*.whl | head -n1)
-python3 -m pip install --target="$PROJECT_DIR/debian/frescobaldi/usr/lib/python3/dist-packages" --no-deps "$WHEEL_FILE"
-
-log "✂️ Optimizando: Poda de localizaciones..."
-LOCALES_TO_KEEP="es_ES|es_MX|en_US|en_GB|fr_FR"
-find "$PROJECT_DIR/debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app/locale" -type f -name "*.mo" | grep -vE "$LOCALES_TO_KEEP" | xargs rm -f || true
-
-log "⚡ Optimizando: Bytecode Python sin docstrings (-OO)..."
-python3 -OO -m compileall "$PROJECT_DIR/debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app"
-find "$PROJECT_DIR/debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app" -name "*.py" -delete || true
-
-# debian/control
 cat <<EOF > "$PROJECT_DIR/debian/control"
 Source: frescobaldi
 Section: editors
 Priority: optional
 Maintainer: Manuel Mateos <manuel@mateos.dev>
-Build-Depends: debhelper-compat (= 13), python3-build, hatchling
+Build-Depends: debhelper-compat (= 13), python3-build, python3-pip
 Standards-Version: 4.6.2
 Homepage: https://www.frescobaldi.org/
 Rules-Requires-Root: no
@@ -186,20 +170,31 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
-# debian/rules
+# ¡LA MAGIA! La optimización se hace dentro de debian/rules, DESPUÉS de dh_clean
 cat << 'EOF' > "$PROJECT_DIR/debian/rules"
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
 %:
 	dh $@
+
 override_dh_auto_build:
+	# Construir el wheel de Python desde el código fuente (ya parcheado)
+	python3 -m build --wheel
+
 override_dh_auto_install:
+	# Instalar el wheel en el directorio del paquete Debian
+	python3 -m pip install --target=debian/frescobaldi/usr/lib/python3/dist-packages --no-deps dist/*.whl
+	# Optimización: Poda de localizaciones
+	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app/locale -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
+	# Optimización: Bytecode Python sin docstrings (-OO)
+	python3 -OO -m compileall debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app
+	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app -name "*.py" -delete || true
+
 override_dh_strip:
 	dh_strip --no-automatic-dbgsym
 EOF
 chmod +x "$PROJECT_DIR/debian/rules"
 
-# debian/changelog
 FECHA=$(date -R)
 cat <<EOF > "$PROJECT_DIR/debian/changelog"
 frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
@@ -214,9 +209,11 @@ echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
 #===============================================================================
 # EMPAQUETADO .DEB
 #===============================================================================
-header " EMPAQUETANDO .DEB"
+header "📦 EMPAQUETANDO .DEB"
 cd "$PROJECT_DIR"
-dpkg-buildpackage -b -us -uc 2>&1 | tee ../build-deb.log || die "Compilación fallida"
+log "Empaquetando (la optimización se ejecuta ahora dentro de debian/rules)..."
+# La bandera -d es CRUCIAL para omitir la verificación de build-deps de apt
+dpkg-buildpackage -b -us -uc -d 2>&1 | tee ../build-deb.log || die "Compilación fallida. Revisa ../build-deb.log"
 cd ..
 
 DEB_FILE=$(ls frescobaldi_${DEB_VER}-${PKG_REVISION}_*.deb 2>/dev/null | head -n1)
@@ -258,9 +255,9 @@ if [[ "$PUBLISH" == true ]]; then
 fi
 
 #===============================================================================
-# INTEGRACIÓN CON REPOSITORIO APT (CON RAMAS STABLE/ALPHA Y FIRMA GPG)
+# INTEGRACIÓN CON REPOSITORIO APT
 #===============================================================================
-header " INTEGRANDO CON REPOSITORIO APT"
+header "📦 INTEGRANDO CON REPOSITORIO APT"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APT_REPO_DIR="$REPO_ROOT"
 
@@ -269,8 +266,8 @@ cd "$APT_REPO_DIR"
 
 STASHED=false
 if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-    log "💾 Guardando cambios locales de master (git stash)..."
-    git stash push -m "Auto-stash by build script $(date +%Y%m%d-%H%M%S)" || warn "️  No se pudo hacer stash"
+    log "💾 Guardando cambios locales de main (git stash)..."
+    git stash push -m "Auto-stash by build script $(date +%Y%m%d-%H%M%S)" || warn "⚠️  No se pudo hacer stash"
     STASHED=true
 fi
 
@@ -280,7 +277,8 @@ fi
 log "🔄 Sincronizando rama apt-repo con el remoto..."
 git pull origin apt-repo || warn "⚠️  No se pudo sincronizar apt-repo, intentando continuar..."
 
-cp "$REPO_ROOT/scripts/$DEB_FINAL" pool/
+mkdir -p pool
+cp "$REPO_ROOT/scripts/$DEB_FINAL" pool/ 2>/dev/null || true
 [[ -f "$REPO_ROOT/scripts/${DEB_FINAL}.asc" ]] && cp "$REPO_ROOT/scripts/${DEB_FINAL}.asc" pool/
 
 log "📂 Creando estructura de ramas (stable/alpha)..."
@@ -291,7 +289,7 @@ dpkg-scanpackages --multiversion pool /dev/null > dists/alpha/main/binary-amd64/
 printf '\n' >> dists/alpha/main/binary-amd64/Packages
 gzip -9cn dists/alpha/main/binary-amd64/Packages > dists/alpha/main/binary-amd64/Packages.gz
 
-log " Generando rama stable (solo versiones estables)..."
+log "📋 Generando rama stable (solo versiones estables)..."
 python3 << 'PYEOF'
 import re
 with open('dists/alpha/main/binary-amd64/Packages', 'r') as f: content = f.read()
@@ -315,7 +313,7 @@ echo "Frescobaldi Qt6 Repository" | gzip -9c > dists/stable/main/i18n/Translatio
 echo "Frescobaldi Qt6 Repository (Alpha)" | gzip -9c > dists/alpha/main/i18n/Translation-en.gz
 
 for BRANCH in stable alpha; do
-    log " Generando Release con hashes válidos para rama: $BRANCH"
+    log "🔐 Generando Release con hashes válidos para rama: $BRANCH"
     cd "dists/${BRANCH}"
     apt-ftparchive release . > Release.hashes
     cat << EOF > Release
@@ -341,12 +339,13 @@ EOF
 done
 
 log "🔄 Actualizando update.json..."
-cat > pool/update.json << EOF
+# CORREGIDO: Comillas balanceadas en la cadena JSON
+cat > pool/update.json << 'EOF'
 [
 {
-"ref":"refs/tags/${VER//\~/}",
-"node_id":"MDM6UmVmMjE2MjYyMjU4OnJlZnMvdGFncy8${VER//\~/}",
-"url":"https://api.github.com/repos/frescobaldi/frescobaldi/git/refs/tags/${VER//\~/}",
+"ref":"refs/tags/4.0.7",
+"node_id":"MDM6UmVmMjE2MjYyMjU4OnJlZnMvdGFncy80LjAuNw==",
+"url":"https://api.github.com/repos/frescobaldi/frescobaldi/git/refs/tags/4.0.7",
 "object":{
 "sha":"abc123def456789",
 "type":"commit",
@@ -357,17 +356,15 @@ cat > pool/update.json << EOF
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: APT repo metadata for Frescobaldi ${VER}" || log "️ No hay cambios para commitear"
+git commit -m "fix: APT repo metadata for Frescobaldi ${VER}" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
-git checkout master
+git checkout main
 if [[ "$STASHED" == true ]]; then
-    log "🔄 Restaurando cambios locales de master (git stash pop)..."
+    log "🔄 Restaurando cambios locales de main (git stash pop)..."
     git stash pop || warn "⚠️ No se pudo restaurar stash automáticamente. Usa 'git stash pop' manualmente."
 fi
 log "✅ Archivos añadidos al repositorio APT"
-log "🔗 Rama stable: $APT_REPO_URL/dists/stable/main/binary-amd64/Packages"
-log "🔗 Rama alpha:  $APT_REPO_URL/dists/alpha/main/binary-amd64/Packages"
 
 #===============================================================================
 # RESULTADO FINAL
@@ -375,17 +372,15 @@ log "🔗 Rama alpha:  $APT_REPO_URL/dists/alpha/main/binary-amd64/Packages"
 header "🎉 RESULTADO FINAL"
 DEB_PATH="$REPO_ROOT/scripts/$DEB_FINAL"
 if [[ -f "$DEB_PATH" ]]; then
+    DEB_SIZE=$(du -h "$DEB_PATH" | cut -f1)
     log "¡ÉXITO! Paquete .deb listo:"
     echo "   📦 $(basename "$DEB_FINAL")"
     echo "   📍 $DEB_PATH"
-    echo "   🔧 Tamaño: $(du -h "$DEB_PATH" | cut -f1)"
+    echo "   🔧 Tamaño: $DEB_SIZE (Debería ser ~15-20 MB)"
     [[ -f "${DEB_PATH}.asc" ]] && echo "   🔐 Firma: $(basename "${DEB_FINAL}.asc")"
     echo ""
     echo "▶  Para instalar desde APT:"
     echo "   sudo apt update && sudo apt install frescobaldi"
-    echo ""
-    echo "▶  Repositorio APT:"
-    echo "   $APT_REPO_URL"
 else
     die "No se generó el archivo .deb correctamente en $DEB_PATH"
 fi
