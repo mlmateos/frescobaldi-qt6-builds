@@ -40,7 +40,6 @@ sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://raw.githubusercontent.com/mlmateos/frescobaldi-qt6-builds/main/frescobaldi-qt6-key.asc | sudo gpg --dearmor -o /etc/apt/keyrings/frescobaldi-qt6-key.gpg
 sudo chmod a+r /etc/apt/keyrings/frescobaldi-qt6-key.gpg
 ```
-*(Note: You will need to export your GPG public key to `frescobaldi-qt6-key.asc` and push it to the root of this repository, just like in the TeXstudio repo).*
 
 #### Step 2: Choose Your Branch
 Add the repository to your system. Choose one of the following options:
