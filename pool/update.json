@@ -1,0 +1,12 @@
+[
+{
+"ref":"refs/tags/4.0.7",
+"node_id":"MDM6UmVmMjE2MjYyMjU4OnJlZnMvdGFncy80LjAuNw==",
+"url":"https://api.github.com/repos/frescobaldi/frescobaldi/git/refs/tags/4.0.7",
+"object":{
+"sha":"abc123def456789",
+"type":"commit",
+"url":"https://api.github.com/repos/frescobaldi/frescobaldi/git/commits/abc123def456789"
+}
+}
+]

@@ -1,0 +1,26 @@
+Origin: mlmateos
+Label: Frescobaldi Qt6 Builds
+Suite: alpha
+Codename: alpha
+Date: Thu, 30 Jul 2026 13:38:09 -0600
+Architectures: amd64
+Components: main
+Description: Frescobaldi Qt6 Builds Repository (Alpha)
+Acquire-By-Hash: no
+Date: Thu, 30 Jul 2026 19:38:09 +0000
+MD5Sum:
+ 291ad6586de9b4aac7e39fefbb10e7ae              848 main/binary-amd64/Packages
+ 81e6963952b95bf54bf55baa69b8d9b3              565 main/binary-amd64/Packages.gz
+ 30f636292cf4603924c006b59ef61f76               55 main/i18n/Translation-en.gz
+SHA1:
+ cc51361e010fd0b25f7158b788e387e89428cb9b              848 main/binary-amd64/Packages
+ 83c68bf6acbdeb297d643d32e08e2ad4c603ac08              565 main/binary-amd64/Packages.gz
+ f5b9c95540d742dcc1ff9282a295d4763a7c6112               55 main/i18n/Translation-en.gz
+SHA256:
+ 18712d292f87792669ca6823651695db57f26173f539ef792bf8046c74d44fd8              848 main/binary-amd64/Packages
+ c67883d5746cbb8b3600f59a313215586986a410a4d02b6a6ff4fe510c9f8915              565 main/binary-amd64/Packages.gz
+ bce3c0a4f5f8ea16407e41f68b121010067c080dadf98faf8fc869b2c494d974               55 main/i18n/Translation-en.gz
+SHA512:
+ 2ac7dc378420b4ca8174ec9c34ec3ea22a23a736464e2fb2e7932aaf844c36100b09eadc0be514a480d0400aeaf8bd18417da0f4de16b8f355fdb8957daa8266              848 main/binary-amd64/Packages
+ 21f458369492e9804deaa078375eaa68081ff47a15782925bc08072729ca94deb3bd2e446c7ab213e859697952b1b862d0f70653e80aa6b39c268002ace6feb8              565 main/binary-amd64/Packages.gz
+ 2748da6c5fe95f845bde5c10ffdad8561f85b5395892b716f0b6c885cd48cc3b30811d293ca9b54fdb9ec59f71c3426ec1f764da85aaa0638ffbbb9c86c8964a               55 main/i18n/Translation-en.gz
