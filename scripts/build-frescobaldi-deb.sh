@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v2.6-Definitiva)
-# v2.6: Corrige sintaxis de debian/rules (cada comando en línea separada)
+# build-frescobaldi-deb.sh (v2.7-Definitiva)
+# v2.7: Corrige generación de debian/rules usando escritura explícita línea por línea
 #===============================================================================
 set -euo pipefail
 
@@ -53,7 +53,7 @@ done
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 log()  { echo -e "\n${GREEN}✅ [$(date '+%H:%M:%S')]${NC} $*"; }
-warn() { echo -e "\n${YELLOW}️  [$(date '+%H:%M:%S')]${NC} $*" >&2; }
+warn() { echo -e "\n${YELLOW}⚠️  [$(date '+%H:%M:%S')]${NC} $*" >&2; }
 die()  { echo -e "\n${RED}❌ [$(date '+%H:%M:%S')] ERROR:${NC} $*" >&2; exit 1; }
 info() { echo -e "${CYAN}ℹ️  [$(date '+%H:%M:%S')]${NC} $*"; }
 header() { echo -e "\n${BLUE}═══════════════════════════════════════════════════${NC}"; echo -e "${BLUE}  $*${NC}"; echo -e "${BLUE}═══════════════════════════════════════════════════${NC}"; }
@@ -73,7 +73,7 @@ git_with_retry() {
 #===============================================================================
 # DEPENDENCIAS
 #===============================================================================
-header " VERIFICANDO DEPENDENCIAS"
+header "🔧 VERIFICANDO DEPENDENCIAS"
 for cmd in python3 git dpkg-buildpackage wget; do check_cmd "$cmd"; done
 if [[ "$SIGN" == true ]]; then check_cmd gpg; fi
 if [[ "$PUBLISH" == true ]]; then check_cmd gh; fi
@@ -81,7 +81,7 @@ if [[ "$PUBLISH" == true ]]; then check_cmd gh; fi
 #===============================================================================
 # PREPARACIÓN & CLONADO
 #===============================================================================
-header "📥 PREPARANDO CÓDIGO FUENTE"
+header " PREPARANDO CÓDIGO FUENTE"
 PROJECT_DIR="$(pwd)/frescobaldi-deb"
 if [[ "$CLEAN_BUILD" == true ]]; then
     [[ "$KEEP_SOURCE" == true ]] && rm -rf "$PROJECT_DIR/debian" "$PROJECT_DIR"/*.deb || rm -rf "$PROJECT_DIR"
@@ -99,7 +99,7 @@ rm -rf "$PROJECT_DIR/debian"
 #===============================================================================
 # DETECCIÓN DE VERSIÓN
 #===============================================================================
-header "🏷️ DETECTANDO VERSIÓN"
+header "️ DETECTANDO VERSIÓN"
 cd "$PROJECT_DIR"
 VER_GIT=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//') || VER_GIT="4.0.7"
 VER=$(echo "$VER_GIT" | sed -E 's/alpha([0-9]+)/-alpha\1/; s/beta([0-9]+)/-beta\1/; s/rc([0-9]+)/-rc\1/')
@@ -132,7 +132,7 @@ if new_content != content:
 PYTHON
         log "✅ Créditos añadidos al diálogo About"
     else
-        log "ℹ️  Créditos ya presentes"
+        log "️  Créditos ya presentes"
     fi
 else
     warn "⚠️ No se encontró about.py"
@@ -141,7 +141,7 @@ fi
 #===============================================================================
 # GENERACIÓN DE ESTRUCTURA DEBIAN
 #===============================================================================
-header " GENERANDO ESTRUCTURA DEBIAN"
+header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
 cat <<EOF > "$PROJECT_DIR/debian/control"
@@ -167,8 +167,9 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
-# debian/rules CORREGIDO - Cada comando en su propia línea
-cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
+# debian/rules - ESCRITURA EXPLÍCITA LÍNEA POR LÍNEA
+RULES_FILE="$PROJECT_DIR/debian/rules"
+cat > "$RULES_FILE" << 'RULES_END'
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
 %:
@@ -196,8 +197,8 @@ override_dh_usrlocal:
 
 override_dh_strip:
 	dh_strip --no-automatic-dbgsym
-RULES_EOF
-chmod +x "$PROJECT_DIR/debian/rules"
+RULES_END
+chmod +x "$RULES_FILE"
 
 FECHA=$(date -R)
 cat <<EOF > "$PROJECT_DIR/debian/changelog"
@@ -279,7 +280,7 @@ if ! git checkout apt-repo 2>/dev/null; then
     git checkout -b apt-repo origin/apt-repo || die "No se pudo cambiar a rama apt-repo"
 fi
 log "🔄 Sincronizando rama apt-repo con el remoto..."
-git pull origin apt-repo || warn "️  No se pudo sincronizar apt-repo, intentando continuar..."
+git pull origin apt-repo || warn "⚠️  No se pudo sincronizar apt-repo, intentando continuar..."
 
 mkdir -p pool
 cp "$REPO_ROOT/scripts/$DEB_FINAL" pool/ 2>/dev/null || true
@@ -363,7 +364,7 @@ cat > pool/update.json << 'EOF'
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: correct debian/rules syntax with proper line breaks" || log "ℹ️ No hay cambios para commitear"
+git commit -m "fix: correct debian/rules syntax with explicit line-by-line writing" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
 git checkout main
