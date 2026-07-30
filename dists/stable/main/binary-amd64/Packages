@@ -1,2 +1,22 @@
+Package: frescobaldi
+Version: 4.0.7-1
+Architecture: all
+Maintainer: Manuel Mateos <manuel@mateos.dev>
+Installed-Size: 17004
+Depends: python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-ly, python3-qpageview, poppler-utils, lilypond (>= 2.24)
 Filename: pool/frescobaldi-4.0.7-qt6-all.deb
+Size: 5911064
+MD5sum: 21390f94c65ebfc82dffe3d915eda450
+SHA1: 7bd2754da7fdf443897e4f0a4d7949d7f940285e
+SHA256: 3e01f859e21b2c0f2e130a434f2d2ff3861114d39cab21a7be39be1270579f26
+Section: editors
+Priority: optional
+Homepage: https://www.frescobaldi.org/
+Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
+ Frescobaldi is an advanced text editor for LilyPond music scores.
+ .
+ This is a custom optimized build:
+ * Built for PyQt6 / Qt 6.8.x LTS
+ * Locale pruning (es, en, fr only)
+ * Python bytecode optimized (-OO) for smaller footprint
 
