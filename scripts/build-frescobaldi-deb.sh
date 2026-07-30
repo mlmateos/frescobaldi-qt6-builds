@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v2.5-Definitiva)
-# v2.5: Corrige ubicación del ejecutable (/usr/local/bin -> /usr/bin) y
-#       hace la búsqueda del directorio Python dinámica
+# build-frescobaldi-deb.sh (v2.6-Definitiva)
+# v2.6: Corrige sintaxis de debian/rules (cada comando en línea separada)
 #===============================================================================
 set -euo pipefail
 
@@ -54,7 +53,7 @@ done
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 log()  { echo -e "\n${GREEN}✅ [$(date '+%H:%M:%S')]${NC} $*"; }
-warn() { echo -e "\n${YELLOW}⚠️  [$(date '+%H:%M:%S')]${NC} $*" >&2; }
+warn() { echo -e "\n${YELLOW}️  [$(date '+%H:%M:%S')]${NC} $*" >&2; }
 die()  { echo -e "\n${RED}❌ [$(date '+%H:%M:%S')] ERROR:${NC} $*" >&2; exit 1; }
 info() { echo -e "${CYAN}ℹ️  [$(date '+%H:%M:%S')]${NC} $*"; }
 header() { echo -e "\n${BLUE}═══════════════════════════════════════════════════${NC}"; echo -e "${BLUE}  $*${NC}"; echo -e "${BLUE}═══════════════════════════════════════════════════${NC}"; }
@@ -74,7 +73,7 @@ git_with_retry() {
 #===============================================================================
 # DEPENDENCIAS
 #===============================================================================
-header "🔧 VERIFICANDO DEPENDENCIAS"
+header " VERIFICANDO DEPENDENCIAS"
 for cmd in python3 git dpkg-buildpackage wget; do check_cmd "$cmd"; done
 if [[ "$SIGN" == true ]]; then check_cmd gpg; fi
 if [[ "$PUBLISH" == true ]]; then check_cmd gh; fi
@@ -168,8 +167,8 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
-# debian/rules CORREGIDO
-cat << 'EOF' > "$PROJECT_DIR/debian/rules"
+# debian/rules CORREGIDO - Cada comando en su propia línea
+cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
 %:
@@ -179,34 +178,25 @@ override_dh_auto_build:
 	python3 -m build --wheel
 
 override_dh_auto_install:
-	# 1. Instalar el wheel. pip coloca el ejecutable en usr/local/bin/ por defecto
 	python3 -m pip install --no-deps --prefix=/usr --root=$(CURDIR)/debian/frescobaldi dist/*.whl
-	
-	# 2. Mover el ejecutable de usr/local/bin/ a usr/bin/ (donde Debian lo espera)
 	mkdir -p debian/frescobaldi/usr/bin
 	if [ -f debian/frescobaldi/usr/local/bin/frescobaldi ]; then
 		mv debian/frescobaldi/usr/local/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi
 		rmdir debian/frescobaldi/usr/local/bin 2>/dev/null || true
 		rmdir debian/frescobaldi/usr/local 2>/dev/null || true
 	fi
-	
-	# 3. Búsqueda DINÁMICA del directorio del paquete Python
 	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
 	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then
-		# Optimización: Poda de localizaciones
 		find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
-		
-		# Optimización: Bytecode Python sin docstrings (-OO)
 		python3 -OO -m compileall "$$PKG_DIR"
 		find "$$PKG_DIR" -name "*.py" -delete || true
 	fi
 
-# Deshabilitar dh_usrlocal para evitar conflictos con /usr/local/bin
 override_dh_usrlocal:
 
 override_dh_strip:
 	dh_strip --no-automatic-dbgsym
-EOF
+RULES_EOF
 chmod +x "$PROJECT_DIR/debian/rules"
 
 FECHA=$(date -R)
@@ -237,7 +227,7 @@ mv -f "$DEB_FILE" "$DEB_FINAL"
 sha256sum "$DEB_FINAL" > SHA256SUMS-DEB.txt
 
 if [[ "$SIGN" == true ]]; then
-    header "🔐 FIRMANDO CON GPG"
+    header " FIRMANDO CON GPG"
     [[ -z "$GPG_KEY" ]] && GPG_KEY=$(gpg --list-secret-keys --keyid-format long | grep "^sec" | head -n1 | awk '{print $2}' | cut -d'/' -f2)
     gpg --default-key "$GPG_KEY" --yes --detach-sign --armor "$DEB_FINAL"
     log "✅ Firma generada: ${DEB_FINAL}.asc"
@@ -271,7 +261,7 @@ fi
 #===============================================================================
 # INTEGRACIÓN CON REPOSITORIO APT
 #===============================================================================
-header " INTEGRANDO CON REPOSITORIO APT"
+header "📦 INTEGRANDO CON REPOSITORIO APT"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APT_REPO_DIR="$REPO_ROOT"
 
@@ -289,13 +279,13 @@ if ! git checkout apt-repo 2>/dev/null; then
     git checkout -b apt-repo origin/apt-repo || die "No se pudo cambiar a rama apt-repo"
 fi
 log "🔄 Sincronizando rama apt-repo con el remoto..."
-git pull origin apt-repo || warn "⚠️  No se pudo sincronizar apt-repo, intentando continuar..."
+git pull origin apt-repo || warn "️  No se pudo sincronizar apt-repo, intentando continuar..."
 
 mkdir -p pool
 cp "$REPO_ROOT/scripts/$DEB_FINAL" pool/ 2>/dev/null || true
 [[ -f "$REPO_ROOT/scripts/${DEB_FINAL}.asc" ]] && cp "$REPO_ROOT/scripts/${DEB_FINAL}.asc" pool/
 
-log " Creando estructura de ramas (stable/alpha)..."
+log "📂 Creando estructura de ramas (stable/alpha)..."
 mkdir -p dists/stable/main/binary-amd64 dists/alpha/main/binary-amd64 dists/stable/main/i18n dists/alpha/main/i18n
 
 log "📋 Generando rama alpha (todas las versiones)..."
@@ -373,13 +363,13 @@ cat > pool/update.json << 'EOF'
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: correct executable placement and dynamic package detection" || log "ℹ️ No hay cambios para commitear"
+git commit -m "fix: correct debian/rules syntax with proper line breaks" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
 git checkout main
 if [[ "$STASHED" == true ]]; then
     log "🔄 Restaurando cambios locales de main (git stash pop)..."
-    git stash pop || warn "⚠️ No se pudo restaurar stash automáticamente. Usa 'git stash pop' manualmente."
+    git stash pop || warn "️ No se pudo restaurar stash automáticamente. Usa 'git stash pop' manualmente."
 fi
 log "✅ Archivos añadidos al repositorio APT"
 
@@ -392,7 +382,7 @@ if [[ -f "$DEB_PATH" ]]; then
     DEB_SIZE=$(du -h "$DEB_PATH" | cut -f1)
     log "¡ÉXITO! Paquete .deb listo:"
     echo "   📦 $(basename "$DEB_FINAL")"
-    echo "    $DEB_PATH"
+    echo "   📍 $DEB_PATH"
     echo "   🔧 Tamaño: $DEB_SIZE"
     [[ -f "${DEB_PATH}.asc" ]] && echo "   🔐 Firma: $(basename "${DEB_FINAL}.asc")"
     echo ""
