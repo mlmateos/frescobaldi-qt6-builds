@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v2.4-Definitiva)
-# v2.4: Usa pip install --prefix/--root para generar el ejecutable en /usr/bin automáticamente
+# build-frescobaldi-deb.sh (v2.5-Definitiva)
+# v2.5: Corrige ubicación del ejecutable (/usr/local/bin -> /usr/bin) y
+#       hace la búsqueda del directorio Python dinámica
 #===============================================================================
 set -euo pipefail
 
@@ -141,7 +142,7 @@ fi
 #===============================================================================
 # GENERACIÓN DE ESTRUCTURA DEBIAN
 #===============================================================================
-header "📦 GENERANDO ESTRUCTURA DEBIAN"
+header " GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
 cat <<EOF > "$PROJECT_DIR/debian/control"
@@ -167,7 +168,7 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
-# ¡LA MAGIA! Usamos --prefix y --root para que pip genere el ejecutable en /usr/bin automáticamente
+# debian/rules CORREGIDO
 cat << 'EOF' > "$PROJECT_DIR/debian/rules"
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
@@ -178,16 +179,30 @@ override_dh_auto_build:
 	python3 -m build --wheel
 
 override_dh_auto_install:
-	# Instalar el wheel usando --prefix y --root. Esto coloca la librería en usr/lib/... 
-	# y crea el script ejecutable 'frescobaldi' en usr/bin/ automáticamente.
+	# 1. Instalar el wheel. pip coloca el ejecutable en usr/local/bin/ por defecto
 	python3 -m pip install --no-deps --prefix=/usr --root=$(CURDIR)/debian/frescobaldi dist/*.whl
 	
-	# Optimización: Poda de localizaciones
-	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app/locale -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
+	# 2. Mover el ejecutable de usr/local/bin/ a usr/bin/ (donde Debian lo espera)
+	mkdir -p debian/frescobaldi/usr/bin
+	if [ -f debian/frescobaldi/usr/local/bin/frescobaldi ]; then
+		mv debian/frescobaldi/usr/local/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi
+		rmdir debian/frescobaldi/usr/local/bin 2>/dev/null || true
+		rmdir debian/frescobaldi/usr/local 2>/dev/null || true
+	fi
 	
-	# Optimización: Bytecode Python sin docstrings (-OO)
-	python3 -OO -m compileall debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app
-	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app -name "*.py" -delete || true
+	# 3. Búsqueda DINÁMICA del directorio del paquete Python
+	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
+	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then
+		# Optimización: Poda de localizaciones
+		find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
+		
+		# Optimización: Bytecode Python sin docstrings (-OO)
+		python3 -OO -m compileall "$$PKG_DIR"
+		find "$$PKG_DIR" -name "*.py" -delete || true
+	fi
+
+# Deshabilitar dh_usrlocal para evitar conflictos con /usr/local/bin
+override_dh_usrlocal:
 
 override_dh_strip:
 	dh_strip --no-automatic-dbgsym
@@ -199,7 +214,8 @@ cat <<EOF > "$PROJECT_DIR/debian/changelog"
 frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
 
   * Custom optimized build from upstream tag ${VER_GIT}.
-  * PyQt6, locale pruning, Python -OO bytecode optimization, and proper /usr/bin executable generation via pip.
+  * PyQt6, locale pruning, Python -OO bytecode optimization.
+  * Fixed executable placement (/usr/bin) and dynamic package directory detection.
 
  -- Manuel Mateos <manuel@mateos.dev>  ${FECHA}
 EOF
@@ -255,7 +271,7 @@ fi
 #===============================================================================
 # INTEGRACIÓN CON REPOSITORIO APT
 #===============================================================================
-header "📦 INTEGRANDO CON REPOSITORIO APT"
+header " INTEGRANDO CON REPOSITORIO APT"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APT_REPO_DIR="$REPO_ROOT"
 
@@ -279,7 +295,7 @@ mkdir -p pool
 cp "$REPO_ROOT/scripts/$DEB_FINAL" pool/ 2>/dev/null || true
 [[ -f "$REPO_ROOT/scripts/${DEB_FINAL}.asc" ]] && cp "$REPO_ROOT/scripts/${DEB_FINAL}.asc" pool/
 
-log "📂 Creando estructura de ramas (stable/alpha)..."
+log " Creando estructura de ramas (stable/alpha)..."
 mkdir -p dists/stable/main/binary-amd64 dists/alpha/main/binary-amd64 dists/stable/main/i18n dists/alpha/main/i18n
 
 log "📋 Generando rama alpha (todas las versiones)..."
@@ -357,7 +373,7 @@ cat > pool/update.json << 'EOF'
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: use pip --prefix/--root to properly generate /usr/bin executable" || log "ℹ️ No hay cambios para commitear"
+git commit -m "fix: correct executable placement and dynamic package detection" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
 git checkout main
@@ -376,7 +392,7 @@ if [[ -f "$DEB_PATH" ]]; then
     DEB_SIZE=$(du -h "$DEB_PATH" | cut -f1)
     log "¡ÉXITO! Paquete .deb listo:"
     echo "   📦 $(basename "$DEB_FINAL")"
-    echo "   📍 $DEB_PATH"
+    echo "    $DEB_PATH"
     echo "   🔧 Tamaño: $DEB_SIZE"
     [[ -f "${DEB_PATH}.asc" ]] && echo "   🔐 Firma: $(basename "${DEB_FINAL}.asc")"
     echo ""
