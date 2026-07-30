@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v2.3-Final)
-# v2.3: Corrige la falta del ejecutable en /usr/bin copiándolo desde la raíz del fuente
+# build-frescobaldi-deb.sh (v2.4-Definitiva)
+# v2.4: Usa pip install --prefix/--root para generar el ejecutable en /usr/bin automáticamente
 #===============================================================================
 set -euo pipefail
 
@@ -167,6 +167,7 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
+# ¡LA MAGIA! Usamos --prefix y --root para que pip genere el ejecutable en /usr/bin automáticamente
 cat << 'EOF' > "$PROJECT_DIR/debian/rules"
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
@@ -177,18 +178,14 @@ override_dh_auto_build:
 	python3 -m build --wheel
 
 override_dh_auto_install:
-	# 1. Instalar la biblioteca Python
-	python3 -m pip install --target=debian/frescobaldi/usr/lib/python3/dist-packages --no-deps dist/*.whl
+	# Instalar el wheel usando --prefix y --root. Esto coloca la librería en usr/lib/... 
+	# y crea el script ejecutable 'frescobaldi' en usr/bin/ automáticamente.
+	python3 -m pip install --no-deps --prefix=/usr --root=$(CURDIR)/debian/frescobaldi dist/*.whl
 	
-	# 2. ¡CORRECCIÓN! Copiar el script ejecutable a /usr/bin
-	mkdir -p debian/frescobaldi/usr/bin
-	cp $(CURDIR)/frescobaldi debian/frescobaldi/usr/bin/frescobaldi
-	chmod +x debian/frescobaldi/usr/bin/frescobaldi
-	
-	# 3. Optimización: Poda de localizaciones
+	# Optimización: Poda de localizaciones
 	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app/locale -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
 	
-	# 4. Optimización: Bytecode Python sin docstrings (-OO)
+	# Optimización: Bytecode Python sin docstrings (-OO)
 	python3 -OO -m compileall debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app
 	find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi_app -name "*.py" -delete || true
 
@@ -202,7 +199,7 @@ cat <<EOF > "$PROJECT_DIR/debian/changelog"
 frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
 
   * Custom optimized build from upstream tag ${VER_GIT}.
-  * PyQt6, locale pruning, Python -OO bytecode optimization, and fixed /usr/bin executable.
+  * PyQt6, locale pruning, Python -OO bytecode optimization, and proper /usr/bin executable generation via pip.
 
  -- Manuel Mateos <manuel@mateos.dev>  ${FECHA}
 EOF
@@ -360,7 +357,7 @@ cat > pool/update.json << 'EOF'
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: add executable to /usr/bin and correct APT repo formatting" || log "ℹ️ No hay cambios para commitear"
+git commit -m "fix: use pip --prefix/--root to properly generate /usr/bin executable" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
 git checkout main
