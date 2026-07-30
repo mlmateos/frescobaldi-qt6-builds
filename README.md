@@ -11,8 +11,8 @@ Custom, optimized builds of [Frescobaldi](https://github.com/frescobaldi/frescob
 ### ✨ Features
 - 🎨 **PyQt6 / Qt 6.8.x LTS** — Modern UI/UX with long-term stability.
 - ✂️ **Aggressive Optimization** — Locale pruning (only `es_ES`, `es_MX`, `en_US`, `en_GB`, `fr_FR`) and Python bytecode optimization (`-OO`) to remove docstrings, reducing package size significantly.
-- 🔐 **GPG-signed packages** — Cryptographic security verification for all releases.
--  **Two distribution methods**: `.deb` packages for Debian/Ubuntu-based distributions, and `AppImage` for any Linux distribution.
+- 🔐 **GPG-signed packages** — Cryptographic security verification for all releases and repository metadata.
+- 📦 **Two distribution methods**: `.deb` packages for Debian/Ubuntu-based distributions, and `AppImage` for any Linux distribution.
 - 🛠️ **Automated build scripts** — Compile your own optimized version easily.
 
 ---
@@ -30,20 +30,68 @@ sudo apt install lilypond
 
 ---
 
-### 🚀 Installation
+### 🚀 Quick Install (Recommended)
+The easiest and most secure way to install Frescobaldi and keep it automatically updated is via our GPG-signed APT repository.
+
+#### Step 1: Import the GPG Key
+Our repository is cryptographically signed to ensure package integrity and security.
+```bash
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://raw.githubusercontent.com/mlmateos/frescobaldi-qt6-builds/main/frescobaldi-qt6-key.asc | sudo gpg --dearmor -o /etc/apt/keyrings/frescobaldi-qt6-key.gpg
+sudo chmod a+r /etc/apt/keyrings/frescobaldi-qt6-key.gpg
+```
+*(Note: You will need to export your GPG public key to `frescobaldi-qt6-key.asc` and push it to the root of this repository, just like in the TeXstudio repo).*
+
+#### Step 2: Choose Your Branch
+Add the repository to your system. Choose one of the following options:
+
+🟢 **Stable** (Recommended for most users) — Only stable releases:
+```bash
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/frescobaldi-qt6-key.gpg] https://mlmateos.github.io/frescobaldi-qt6-builds stable main" | \
+  sudo tee /etc/apt/sources.list.d/frescobaldi-qt6-builds.list
+```
+
+🟡 **Alpha** — Development versions (alpha, beta, rc) + stable releases:
+```bash
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/frescobaldi-qt6-key.gpg] https://mlmateos.github.io/frescobaldi-qt6-builds alpha main" | \
+  sudo tee /etc/apt/sources.list.d/frescobaldi-qt6-builds.list
+```
+*(💡 Tip: You can switch between branches at any time by running the corresponding command again).*
+
+#### Step 3: Install Frescobaldi
+```bash
+sudo apt update
+sudo apt install frescobaldi
+```
+
+#### Updating & Uninstalling
+```bash
+# To update:
+sudo apt update && sudo apt upgrade frescobaldi
+
+# To uninstall:
+sudo apt remove frescobaldi
+sudo rm /etc/apt/sources.list.d/frescobaldi-qt6-builds.list
+```
+
+---
+
+### 📦 Alternative Installation Methods
 
 #### Method 1: Direct `.deb` Download
-Go to [Releases](https://github.com/mlmateos/frescobaldi-qt6-builds/releases), download the latest `.deb`, and install:
-```bash
-sudo apt install ./frescobaldi-*-qt6-all.deb
-```
+If you prefer not to use the APT repository:
+1. Go to [Releases](https://github.com/mlmateos/frescobaldi-qt6-builds/releases)
+2. Download the latest `frescobaldi-*-qt6-all.deb`
+3. Install with: `sudo apt install ./frescobaldi-*-qt6-all.deb`
 
 #### Method 2: AppImage (Portable)
 For a portable version that works on any Linux distribution (no installation required):
-```bash
-chmod +x frescobaldi-*.AppImage
-./frescobaldi-*.AppImage
-```
+1. Download the latest `frescobaldi-*-qt6-x86_64.AppImage` from [Releases](https://github.com/mlmateos/frescobaldi-qt6-builds/releases)
+2. Make it executable and run:
+   ```bash
+   chmod +x frescobaldi-*.AppImage
+   ./frescobaldi-*.AppImage
+   ```
 
 ---
 
@@ -57,13 +105,7 @@ cd ~/frescobaldi-qt6-builds/scripts
 ./install-deps-frescobaldi.sh
 ```
 
-#### Step 2: Clone the Repository
-```bash
-git clone https://github.com/mlmateos/frescobaldi-qt6-builds.git
-cd frescobaldi-qt6-builds/scripts
-```
-
-#### Step 3: Build
+#### Step 2: Build
 ```bash
 # Build optimized .deb package
 ./build-frescobaldi-deb.sh --clean --poppler --sign --publish
@@ -90,12 +132,13 @@ Both build scripts support the following options for consistency with your workf
 ### What the Scripts Do (Step by Step)
 - 🔍 Verify dependencies
 - 📥 Clone/update Frescobaldi source from upstream
-- ️ Detect version from git tags
+- 🏷️ Detect version from git tags
 - 🛠️ Apply custom patches (Add custom credits to the About dialog)
 - 🔨 Build Python wheel and package the result (`.deb` or `AppImage`)
 - ✂️ Apply optimizations (Locale pruning, Python `-OO` bytecode)
 - 🔐 Sign with GPG (if `--sign`)
 - 🌐 Publish to GitHub Releases (if `--publish`)
+- 🗄️ Update APT repository with proper branch classification (`.deb` only)
 
 ---
 
@@ -110,11 +153,10 @@ Both build scripts support the following options for consistency with your workf
 ---
 
 ### 🔒 Security
-All packages are signed with GPG. You can verify the signatures:
+All packages and repository metadata are signed with GPG. You can verify the signatures:
 ```bash
-# Import the GPG key (exported from your keyring)
-gpg --export --armor YOUR_KEY_ID > frescobaldi-qt6-key.asc
-gpg --import frescobaldi-qt6-key.asc
+# Import the GPG key (if not done during installation)
+curl -fsSL https://raw.githubusercontent.com/mlmateos/frescobaldi-qt6-builds/main/frescobaldi-qt6-key.asc | gpg --dearmor > frescobaldi-qt6-key.gpg
 
 # Verify .deb signature
 gpg --verify frescobaldi-*.deb.asc frescobaldi-*.deb
@@ -131,7 +173,7 @@ gpg --verify frescobaldi-*.AppImage.asc frescobaldi-*.AppImage
 - [LilyPond Official Site](https://lilypond.org/)
 
 ### 📄 License
-This project (build scripts and infrastructure) is licensed under the MIT License.
+This project (build scripts and infrastructure) is licensed under the MIT License.  
 Frescobaldi itself is licensed under GPL-3.0+.
 
 ### 🤖 Acknowledgments
