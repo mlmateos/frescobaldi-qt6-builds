@@ -156,7 +156,7 @@ Rules-Requires-Root: no
 
 Package: frescobaldi
 Architecture: all
-Depends: python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-ly, python3-qpageview, $( [[ "$ENABLE_POPPLER" == true ]] && echo "poppler-utils, " )lilypond (>= 2.24)
+Depends: python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, python3-ly, python3-qpageview, $( [[ "$ENABLE_POPPLER" == true ]] && echo "poppler-utils, " )lilypond (>= 2.24)
 Recommends: lilypond
 Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  Frescobaldi is an advanced text editor for LilyPond music scores.
@@ -167,7 +167,7 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
-# debian/rules - GENERADO CON PRINTF LÍNEA POR LÍNEA
+# debian/rules - VERSIÓN CORREGIDA PARA EVITAR CONFLICTOS DE QICON
 RULES_FILE="$PROJECT_DIR/debian/rules"
 printf '#!/usr/bin/make -f\n' > "$RULES_FILE"
 printf 'export DH_VERBOSE = 1\n' >> "$RULES_FILE"
@@ -176,9 +176,13 @@ printf '\tdh $@\n\n' >> "$RULES_FILE"
 printf 'override_dh_auto_build:\n' >> "$RULES_FILE"
 printf '\tpython3 -m build --wheel\n\n' >> "$RULES_FILE"
 printf 'override_dh_auto_install:\n' >> "$RULES_FILE"
-printf '\tpython3 -m pip install --no-deps --prefix=/usr --root=$(CURDIR)/debian/frescobaldi dist/*.whl\n' >> "$RULES_FILE"
+printf '\t# Instalar frescobaldi en la MISMA ruta que qpageview y python-ly del sistema\n' >> "$RULES_FILE"
+printf '\tpython3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl\n' >> "$RULES_FILE"
+printf '\t# Crear el ejecutable manualmente apuntando a la ruta correcta\n' >> "$RULES_FILE"
 printf '\tmkdir -p debian/frescobaldi/usr/bin\n' >> "$RULES_FILE"
-printf '\tif [ -f debian/frescobaldi/usr/local/bin/frescobaldi ]; then mv debian/frescobaldi/usr/local/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi; fi\n' >> "$RULES_FILE"
+printf '\tprintf "#!/usr/bin/python3\\nimport sys\\nsys.path.insert(0, \'/usr/lib/python3/dist-packages\')\\nfrom frescobaldi.__main__ import main\\nsys.exit(main())\\n" > debian/frescobaldi/usr/bin/frescobaldi\n' >> "$RULES_FILE"
+printf '\tchmod +x debian/frescobaldi/usr/bin/frescobaldi\n' >> "$RULES_FILE"
+printf '\t# Optimización: Poda de localizaciones\n' >> "$RULES_FILE"
 printf '\tPKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)\n' >> "$RULES_FILE"
 printf '\tif [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi\n' >> "$RULES_FILE"
 printf '\noverride_dh_usrlocal:\n\n' >> "$RULES_FILE"
