@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #===============================================================================
-# build-frescobaldi-deb.sh (v2.8-Definitiva)
-# v2.8: Usa printf para generar debian/rules línea por línea
+# build-frescobaldi-deb.sh (v2.9-Definitiva)
+# v2.9: Genera debian/rules con printf línea por línea para evitar errores de sintaxis
 #===============================================================================
 set -euo pipefail
 
@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
             echo "Uso: ./build-frescobaldi-deb.sh [OPCIONES]"
             echo "  --clean, --branch, --poppler, --sign, --publish, --gpg-key, --revision, --yes, --no-keep-source, --help"
             exit 0 ;;
-        *) echo "❌ Argumento desconocido: $1" >&2; exit 1 ;;
+        *) echo " Argumento desconocido: $1" >&2; exit 1 ;;
     esac
 done
 
@@ -81,7 +81,7 @@ if [[ "$PUBLISH" == true ]]; then check_cmd gh; fi
 #===============================================================================
 # PREPARACIÓN & CLONADO
 #===============================================================================
-header "📥 PREPARANDO CÓDIGO FUENTE"
+header " PREPARANDO CÓDIGO FUENTE"
 PROJECT_DIR="$(pwd)/frescobaldi-deb"
 if [[ "$CLEAN_BUILD" == true ]]; then
     [[ "$KEEP_SOURCE" == true ]] && rm -rf "$PROJECT_DIR/debian" "$PROJECT_DIR"/*.deb || rm -rf "$PROJECT_DIR"
@@ -99,7 +99,7 @@ rm -rf "$PROJECT_DIR/debian"
 #===============================================================================
 # DETECCIÓN DE VERSIÓN
 #===============================================================================
-header "🏷️ DETECTANDO VERSIÓN"
+header "️ DETECTANDO VERSIÓN"
 cd "$PROJECT_DIR"
 VER_GIT=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//') || VER_GIT="4.0.7"
 VER=$(echo "$VER_GIT" | sed -E 's/alpha([0-9]+)/-alpha\1/; s/beta([0-9]+)/-beta\1/; s/rc([0-9]+)/-rc\1/')
@@ -141,7 +141,7 @@ fi
 #===============================================================================
 # GENERACIÓN DE ESTRUCTURA DEBIAN
 #===============================================================================
-header " GENERANDO ESTRUCTURA DEBIAN"
+header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
 cat <<EOF > "$PROJECT_DIR/debian/control"
@@ -178,23 +178,15 @@ printf '\tpython3 -m build --wheel\n\n' >> "$RULES_FILE"
 printf 'override_dh_auto_install:\n' >> "$RULES_FILE"
 printf '\tpython3 -m pip install --no-deps --prefix=/usr --root=$(CURDIR)/debian/frescobaldi dist/*.whl\n' >> "$RULES_FILE"
 printf '\tmkdir -p debian/frescobaldi/usr/bin\n' >> "$RULES_FILE"
-printf '\tif [ -f debian/frescobaldi/usr/local/bin/frescobaldi ]; then\n' >> "$RULES_FILE"
-printf '\t\tmv debian/frescobaldi/usr/local/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi\n' >> "$RULES_FILE"
-printf '\t\trmdir debian/frescobaldi/usr/local/bin 2>/dev/null || true\n' >> "$RULES_FILE"
-printf '\t\trmdir debian/frescobaldi/usr/local 2>/dev/null || true\n' >> "$RULES_FILE"
-printf '\tfi\n' >> "$RULES_FILE"
+printf '\tif [ -f debian/frescobaldi/usr/local/bin/frescobaldi ]; then mv debian/frescobaldi/usr/local/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi; fi\n' >> "$RULES_FILE"
 printf '\tPKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)\n' >> "$RULES_FILE"
-printf '\tif [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then\n' >> "$RULES_FILE"
-printf '\t\tfind "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true\n' >> "$RULES_FILE"
-printf '\t\tpython3 -OO -m compileall "$$PKG_DIR"\n' >> "$RULES_FILE"
-printf '\t\tfind "$$PKG_DIR" -name "*.py" -delete || true\n' >> "$RULES_FILE"
-printf '\tfi\n\n' >> "$RULES_FILE"
-printf 'override_dh_usrlocal:\n\n' >> "$RULES_FILE"
+printf '\tif [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi\n' >> "$RULES_FILE"
+printf '\noverride_dh_usrlocal:\n\n' >> "$RULES_FILE"
 printf 'override_dh_strip:\n' >> "$RULES_FILE"
 printf '\tdh_strip --no-automatic-dbgsym\n' >> "$RULES_FILE"
 chmod +x "$RULES_FILE"
 
-log "✅ debian/rules generado correctamente"
+log "✅ debian/rules generado. Contenido:"
 cat "$RULES_FILE"
 
 FECHA=$(date -R)
@@ -212,7 +204,7 @@ echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
 #===============================================================================
 # EMPAQUETADO .DEB
 #===============================================================================
-header "📦 EMPAQUETANDO .DEB"
+header " EMPAQUETANDO .DEB"
 cd "$PROJECT_DIR"
 log "Empaquetando..."
 dpkg-buildpackage -b -us -uc -d 2>&1 | tee ../build-deb.log || die "Compilación fallida. Revisa ../build-deb.log"
@@ -269,7 +261,7 @@ cd "$APT_REPO_DIR"
 STASHED=false
 if ! git diff-index --quiet HEAD -- 2>/dev/null; then
     log "💾 Guardando cambios locales de main (git stash)..."
-    git stash push -m "Auto-stash by build script $(date +%Y%m%d-%H%M%S)" || warn "️  No se pudo hacer stash"
+    git stash push -m "Auto-stash by build script $(date +%Y%m%d-%H%M%S)" || warn "⚠️  No se pudo hacer stash"
     STASHED=true
 fi
 
@@ -277,7 +269,7 @@ if ! git checkout apt-repo 2>/dev/null; then
     git checkout -b apt-repo origin/apt-repo || die "No se pudo cambiar a rama apt-repo"
 fi
 log "🔄 Sincronizando rama apt-repo con el remoto..."
-git pull origin apt-repo || warn "⚠️  No se pudo sincronizar apt-repo, intentando continuar..."
+git pull origin apt-repo || warn "️  No se pudo sincronizar apt-repo, intentando continuar..."
 
 mkdir -p pool
 cp "$REPO_ROOT/scripts/$DEB_FINAL" pool/ 2>/dev/null || true
@@ -290,7 +282,7 @@ log "📋 Generando rama alpha (todas las versiones)..."
 dpkg-scanpackages --multiversion pool /dev/null > dists/alpha/main/binary-amd64/Packages
 gzip -9cn dists/alpha/main/binary-amd64/Packages > dists/alpha/main/binary-amd64/Packages.gz
 
-log " Generando rama stable (solo versiones estables)..."
+log "📋 Generando rama stable (solo versiones estables)..."
 python3 << 'PYEOF'
 import re
 with open('dists/alpha/main/binary-amd64/Packages', 'r') as f:
@@ -361,13 +353,13 @@ cat > pool/update.json << 'EOF'
 EOF
 
 git add -f pool/ dists/
-git commit -m "fix: use printf to generate debian/rules with proper line breaks" || log "ℹ️ No hay cambios para commitear"
+git commit -m "fix: use printf to generate debian/rules with proper syntax" || log "ℹ️ No hay cambios para commitear"
 git push origin apt-repo
 
 git checkout main
 if [[ "$STASHED" == true ]]; then
     log "🔄 Restaurando cambios locales de main (git stash pop)..."
-    git stash pop || warn "️ No se pudo restaurar stash automáticamente. Usa 'git stash pop' manualmente."
+    git stash pop || warn "⚠️ No se pudo restaurar stash automáticamente. Usa 'git stash pop' manualmente."
 fi
 log "✅ Archivos añadidos al repositorio APT"
 
