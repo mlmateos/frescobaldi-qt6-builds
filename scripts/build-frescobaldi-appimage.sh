@@ -149,7 +149,58 @@ fi
 #===============================================================================
 header "🚀 CONSTRUYENDO APPIMAGE AUTOCONTENIDO"
 
-# Instalar python-appimage si no existe
+# 1. Definir y preparar el AppDir
+APPDIR="$PROJECT_DIR/AppDir"
+rm -rf "$APPDIR"
+mkdir -p "$APPDIR"
+
+# 2. Crear archivo .desktop
+log "Creando archivo .desktop..."
+cat > "$APPDIR/frescobaldi.desktop" << 'DESKTOP_EOF'
+[Desktop Entry]
+Name=Frescobaldi
+Comment=LilyPond sheet music editor
+Exec=frescobaldi %F
+Icon=frescobaldi
+Type=Application
+Categories=AudioVideo;Music;
+MimeType=text/x-lilypond;
+DESKTOP_EOF
+
+# 3. Buscar y copiar el ícono
+log "Buscando ícono de Frescobaldi..."
+ICON_PATH=$(find "$PROJECT_DIR" -type f \( -name "frescobaldi.png" -o -name "frescobaldi.svg" \) 2>/dev/null | head -n 1) || true
+
+if [[ -n "$ICON_PATH" ]] && [[ -f "$ICON_PATH" ]]; then
+    log "✅ Ícono encontrado: $ICON_PATH"
+    cp "$ICON_PATH" "$APPDIR/frescobaldi.png"
+else
+    log "⚠️  Ícono no encontrado en el código fuente, descargando desde GitHub..."
+    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/frescobaldi.svg" -O "$APPDIR/frescobaldi.svg" 2>/dev/null || true
+    if [[ ! -f "$APPDIR/frescobaldi.svg" ]]; then
+        # Fallback: crear un placeholder simple en PNG
+        python3 -c "
+import struct, zlib
+def create_png(filename, width=256, height=256, color=(0, 120, 215)):
+    def chunk(chunk_type, data):
+        c = chunk_type + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+    with open(filename, 'wb') as f:
+        f.write(b'\x89PNG\r\n\x1a\n')
+        f.write(chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)))
+        raw = b''
+        for y in range(height):
+            raw += b'\x00'
+            for x in range(width):
+                raw += bytes(color)
+        f.write(chunk(b'IDAT', zlib.compress(raw)))
+        f.write(chunk(b'IEND', b''))
+create_png('$APPDIR/frescobaldi.png')
+"
+    fi
+fi
+
+# 4. Instalar python-appimage si no existe
 if ! command -v python-appimage >/dev/null 2>&1; then
     log "Instalando python-appimage..."
     python3 -m pip install --break-system-packages python-appimage || die "No se pudo instalar python-appimage"
@@ -157,7 +208,7 @@ fi
 
 cd "$PROJECT_DIR"
 
-# Crear requirements.txt con todas las dependencias necesarias
+# 5. Crear requirements.txt con todas las dependencias necesarias
 log "Creando requirements.txt para el entorno autocontenido..."
 cat > requirements.txt << 'REQEOF'
 PyQt6>=6.4.0
@@ -167,12 +218,16 @@ qpageview>=1.0.0
 python-ly>=0.9.0
 REQEOF
 
-# Asegurarnos de que los metadatos estén en el directorio actual para python-appimage
+# Copiar metadatos a la raíz del directorio de trabajo (python-appimage los busca ahí)
 cp "$APPDIR/frescobaldi.desktop" .
-cp "$APPDIR/frescobaldi.png" .
+# Copiar el ícono (ya sea .png o .svg)
+if [[ -f "$APPDIR/frescobaldi.png" ]]; then
+    cp "$APPDIR/frescobaldi.png" .
+elif [[ -f "$APPDIR/frescobaldi.svg" ]]; then
+    cp "$APPDIR/frescobaldi.svg" .
+fi
 
-# Generar el AppImage autocontenido
-# python-appimage se encarga de descargar Python 3.13 y las dependencias automáticamente
+# 6. Generar el AppImage autocontenido
 log "Generando AppImage autocontenido (esto puede tardar unos minutos)..."
 python-appimage build app \
     --python-version 3.13 \
@@ -185,7 +240,7 @@ python-appimage build app \
 
 cd ..
 
-# Buscar el AppImage generado (python-appimage lo deja en el directorio actual)
+# 7. Buscar el AppImage generado
 APPIMAGE_FILE=$(ls "$PROJECT_DIR"/Frescobaldi-*.AppImage 2>/dev/null | head -n1)
 [[ -z "$APPIMAGE_FILE" ]] && die "No se generó el AppImage"
 
@@ -194,7 +249,7 @@ mv -f "$APPIMAGE_FILE" "$APPIMAGE_FINAL"
 sha256sum "$APPIMAGE_FINAL" > SHA256SUMS-APPIMAGE.txt
 
 if [[ "$SIGN" == true ]]; then
-    header " FIRMANDO CON GPG"
+    header "🔐 FIRMANDO CON GPG"
     [[ -z "$GPG_KEY" ]] && GPG_KEY=$(gpg --list-secret-keys --keyid-format long | grep "^sec" | head -n1 | awk '{print $2}' | cut -d'/' -f2)
     gpg --default-key "$GPG_KEY" --yes --detach-sign --armor "$APPIMAGE_FINAL"
     log "✅ Firma generada: ${APPIMAGE_FINAL}.asc"
@@ -224,7 +279,7 @@ fi
 header "🎉 RESULTADO FINAL"
 if [[ -f "$APPIMAGE_FINAL" ]]; then
     log "¡ÉXITO! AppImage autocontenido listo:"
-    echo "    $(basename "$APPIMAGE_FINAL")"
+    echo "   📦 $(basename "$APPIMAGE_FINAL")"
     echo "   📍 $(pwd)/$APPIMAGE_FINAL"
     echo "   🔧 Tamaño: $(du -h "$APPIMAGE_FINAL" | cut -f1)"
     echo "   🐍 Incluye: Python 3.13, PyQt6, qpageview, python-ly"
