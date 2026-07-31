@@ -160,14 +160,25 @@ python3 -m pip install --no-deps --target="$APPDIR/usr/lib/python3/dist-packages
 
 python3 -m pip install --no-deps --target="$APPDIR/usr/lib/python3/dist-packages" qpageview python-ly
 
-# 2. Crear el ejecutable (wrapper limpio para AppImage)
+# 2. Crear el ejecutable (wrapper) y el AppRun (punto de entrada raíz)
+log "Creando wrappers de ejecución..."
+
+# Wrapper interno
 cat > "$APPDIR/usr/bin/frescobaldi" << 'WRAPPER_EOF'
-#!/bin/bash
+#!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
 export PYTHONPATH="$HERE/../lib/python3/dist-packages:$PYTHONPATH"
 exec python3 -m frescobaldi "$@"
 WRAPPER_EOF
 chmod +x "$APPDIR/usr/bin/frescobaldi"
+
+# CRUCIAL: appimagetool requiere un archivo 'AppRun' en la raíz del AppDir
+cat > "$APPDIR/AppRun" << 'APPRUN_EOF'
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/frescobaldi" "$@"
+APPRUN_EOF
+chmod +x "$APPDIR/AppRun"
 
 # 3. Crear archivo .desktop CORRECTO (categorías válidas según freedesktop.org)
 log "Creando archivo .desktop..."
