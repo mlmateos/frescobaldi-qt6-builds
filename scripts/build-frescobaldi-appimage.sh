@@ -147,44 +147,50 @@ fi
 #===============================================================================
 # CONSTRUCCIÓN DEL APPIMAGE AUTOCONTENIDO CON PYINSTALLER
 #===============================================================================
-header "🚀 CONSTRUYENDO APPIMAGE AUTOCONTENIDO CON PYINSTALLER"
+header " CONSTRUYENDO APPIMAGE AUTOCONTENIDO CON PYINSTALLER"
 
 # Paso 1: Definir y preparar el AppDir
 APPDIR="$PROJECT_DIR/AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 
-# Paso 2: Crear archivo .desktop
-log "Creando archivo .desktop..."
-cat > "$APPDIR/frescobaldi.desktop" << 'DESKTOP_EOF'
+# Paso 2: Crear archivo .desktop (nombre oficial según INSTALL.md)
+log "Creando archivo .desktop oficial..."
+cat > "$APPDIR/org.frescobaldi.Frescobaldi.desktop" << 'DESKTOP_EOF'
 [Desktop Entry]
 Name=Frescobaldi
 Comment=LilyPond sheet music editor
 Exec=frescobaldi %F
-Icon=frescobaldi
+Icon=org.frescobaldi.Frescobaldi
 Type=Application
 Categories=AudioVideo;Music;
 MimeType=text/x-lilypond;
 DESKTOP_EOF
-cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
+cp "$APPDIR/org.frescobaldi.Frescobaldi.desktop" "$APPDIR/usr/share/applications/"
 
-# Paso 3: Buscar y copiar el ícono
-log "Buscando ícono de Frescobaldi..."
-ICON_PATH=$(find "$PROJECT_DIR" -type f \( -name "frescobaldi.png" -o -name "frescobaldi.svg" \) 2>/dev/null | head -n 1) || true
+# Paso 3: Buscar y copiar el ícono (nombre oficial según INSTALL.md)
+log "Buscando ícono oficial de Frescobaldi..."
+ICON_PATH=$(find "$PROJECT_DIR" -type f \( -name "org.frescobaldi.Frescobaldi.svg" -o -name "org.frescobaldi.Frescobaldi.png" -o -name "frescobaldi.png" -o -name "frescobaldi.svg" \) 2>/dev/null | head -n 1) || true
 
 if [[ -n "$ICON_PATH" ]] && [[ -f "$ICON_PATH" ]]; then
     log "✅ Ícono encontrado: $ICON_PATH"
-    cp "$ICON_PATH" "$APPDIR/frescobaldi.png"
-    cp "$ICON_PATH" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+    cp "$ICON_PATH" "$APPDIR/org.frescobaldi.Frescobaldi.svg"
+    cp "$ICON_PATH" "$APPDIR/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.svg"
 else
-    log "⚠️  Ícono no encontrado, descargando desde GitHub..."
-    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/frescobaldi.svg" -O "$APPDIR/frescobaldi.svg" 2>/dev/null || true
-    if [[ -f "$APPDIR/frescobaldi.svg" ]]; then
-        cp "$APPDIR/frescobaldi.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.svg"
-        log "✅ Ícono descargado"
+    log "⚠️  Ícono no encontrado en el código fuente, descargando desde GitHub..."
+    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/org.frescobaldi.Frescobaldi.svg" -O "$APPDIR/org.frescobaldi.Frescobaldi.svg" 2>/dev/null || true
+    if [[ -f "$APPDIR/org.frescobaldi.Frescobaldi.svg" ]]; then
+        cp "$APPDIR/org.frescobaldi.Frescobaldi.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.svg"
+        log "✅ Ícono oficial descargado"
     else
-        # Fallback: crear placeholder
-        python3 -c "
+        # Fallback: descargar el ícono antiguo
+        wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/frescobaldi.svg" -O "$APPDIR/org.frescobaldi.Frescobaldi.svg" 2>/dev/null || true
+        if [[ -f "$APPDIR/org.frescobaldi.Frescobaldi.svg" ]]; then
+            cp "$APPDIR/org.frescobaldi.Frescobaldi.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.svg"
+            log "✅ Ícono alternativo descargado"
+        else
+            # Fallback final: crear un placeholder simple en PNG
+            python3 -c "
 import struct, zlib
 def create_png(filename, width=256, height=256, color=(0, 120, 215)):
     def chunk(chunk_type, data):
@@ -200,10 +206,11 @@ def create_png(filename, width=256, height=256, color=(0, 120, 215)):
                 raw += bytes(color)
         f.write(chunk(b'IDAT', zlib.compress(raw)))
         f.write(chunk(b'IEND', b''))
-create_png('$APPDIR/frescobaldi.png')
+create_png('$APPDIR/org.frescobaldi.Frescobaldi.png')
 "
-        cp "$APPDIR/frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
-        log "✅ Placeholder creado"
+            cp "$APPDIR/org.frescobaldi.Frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.png"
+            log "✅ Placeholder creado"
+        fi
     fi
 fi
 
@@ -274,7 +281,7 @@ fi
 # PUBLICACIÓN EN GITHUB
 #===============================================================================
 if [[ "$PUBLISH" == true ]]; then
-    header " PUBLICANDO EN GITHUB RELEASES"
+    header "🌐 PUBLICANDO EN GITHUB RELEASES"
     gh auth status >/dev/null 2>&1 || die "No autenticado en GitHub CLI"
     FULL_REPO="${GITHUB_USER}/${REPO_NAME}"
     UPLOAD_FILES=("$APPIMAGE_FINAL" "SHA256SUMS-APPIMAGE.txt")
@@ -294,8 +301,8 @@ fi
 header "🎉 RESULTADO FINAL"
 if [[ -f "$APPIMAGE_FINAL" ]]; then
     log "¡ÉXITO! AppImage autocontenido listo:"
-    echo "   📦 $(basename "$APPIMAGE_FINAL")"
-    echo "    $(pwd)/$APPIMAGE_FINAL"
+    echo "    $(basename "$APPIMAGE_FINAL")"
+    echo "   📍 $(pwd)/$APPIMAGE_FINAL"
     echo "   🔧 Tamaño: $(du -h "$APPIMAGE_FINAL" | cut -f1)"
     echo "   🐍 Incluye: Python, PyQt6, qpageview, python-ly (PyInstaller)"
     [[ -f "${APPIMAGE_FINAL}.asc" ]] && echo "   🔐 Firma: $(basename "${APPIMAGE_FINAL}.asc")"
