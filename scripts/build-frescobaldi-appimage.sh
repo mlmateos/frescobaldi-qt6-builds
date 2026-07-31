@@ -169,35 +169,29 @@ exec python3 -m frescobaldi "$@"
 WRAPPER_EOF
 chmod +x "$APPDIR/usr/bin/frescobaldi"
 
-# 3. Copiar iconos y archivo .desktop (CRUCIAL: debe estar en la raíz del AppDir)
-log "Copiando metadatos de escritorio..."
-if [[ -f "$PROJECT_DIR/frescobaldi.desktop" ]]; then
-    cp "$PROJECT_DIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
-    cp "$PROJECT_DIR/frescobaldi.desktop" "$APPDIR/frescobaldi.desktop" # Copia en la raíz para appimagetool
-else
-    # Crear un .desktop básico si no existe
-    cat > "$APPDIR/frescobaldi.desktop" << 'DESKTOP_EOF'
+# 3. Crear archivo .desktop CORRECTO (categorías válidas)
+log "Creando archivo .desktop..."
+cat > "$APPDIR/frescobaldi.desktop" << 'DESKTOP_EOF'
 [Desktop Entry]
 Name=Frescobaldi
 Comment=LilyPond sheet music editor
 Exec=frescobaldi %F
 Icon=frescobaldi
 Type=Application
-Categories=Audio;Music;Qt;
+Categories=AudioVideo;Music;Qt;
 MimeType=text/x-lilypond;
 DESKTOP_EOF
-    cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
-fi
+cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
 
-# Buscar y copiar el icono (también en la raíz)
+# Copiar icono
 ICON_SRC=$(find "$PROJECT_DIR" -name "frescobaldi.png" -o -name "frescobaldi.svg" | head -n 1)
 if [[ -n "$ICON_SRC" ]]; then
+    cp "$ICON_SRC" "$APPDIR/frescobaldi.png"
     cp "$ICON_SRC" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
-    cp "$ICON_SRC" "$APPDIR/frescobaldi.png" # Icono raíz para appimagetool
 fi
 
 # 4. Optimización -OO (MANTENEMOS TODOS LOS IDIOMAS)
-log "⚡ Aplicando optimización -OO (bytecode sin docstrings)..."
+log "⚡ Aplicando optimización -OO..."
 PKG_DIR=$(find "$APPDIR/usr/lib/python3/dist-packages" -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
 if [[ -n "$PKG_DIR" ]] && [[ -d "$PKG_DIR" ]]; then
     python3 -OO -m compileall "$PKG_DIR"
@@ -206,25 +200,32 @@ if [[ -n "$PKG_DIR" ]] && [[ -d "$PKG_DIR" ]]; then
 fi
 
 #===============================================================================
-# EMPAQUETADO CON LINUXDEPLOY Y APPIMAGETOOL
+# EMPAQUETADO CON PYTHON-APPIMAGE (estándar para PyQt6)
 #===============================================================================
-header "🚀 GENERANDO APPIMAGE"
-cd "$PROJECT_DIR"
+header "🚀 GENERANDO APPIMAGE CON PYTHON-APPIMAGE"
 
-# Forzar Qt6 para linuxdeploy-plugin-qt
-export QT_SELECT=qt6
-# Si tienes qmake6 instalado, úsalo explícitamente
-if command -v qmake6 >/dev/null 2>&1; then
-    export QMAKE=qmake6
+# Instalar python-appimage si no existe
+if ! command -v python-appimage >/dev/null 2>&1; then
+    log "Instalando python-appimage..."
+    python3 -m pip install --break-system-packages python-appimage || die "No se pudo instalar python-appimage"
 fi
 
-log "Ejecutando linuxdeploy para empaquetar dependencias Qt/Python..."
-# Usamos --appdir y le decimos que despliegue qt y python
-"$TOOLS_DIR/linuxdeploy-x86_64.AppImage" --appdir=AppDir -d AppDir/frescobaldi.desktop -i AppDir/frescobaldi.png --plugin qt --output appimage || warn "⚠️ linuxdeploy tuvo advertencias, continuando..."
+cd "$PROJECT_DIR"
 
-log "Generando AppImage final con appimagetool..."
-# Aseguramos que appimagetool use el .desktop de la raíz
-"$TOOLS_DIR/appimagetool-x86_64.AppImage" AppDir
+# Crear el AppImage usando python-appimage
+log "Generando AppImage..."
+python-appimage build app \
+    --name "Frescobaldi" \
+    --comment "LilyPond sheet music editor" \
+    --exec "frescobaldi" \
+    --icon "$APPDIR/frescobaldi.png" \
+    --categories "AudioVideo;Music;Qt;" \
+    --python-version 3.13 \
+    --requirements <(echo "qpageview
+python-ly") \
+    "$APPDIR/usr/lib/python3/dist-packages" \
+    || die "python-appimage falló"
+
 cd ..
 
 APPIMAGE_FILE=$(ls "$PROJECT_DIR"/Frescobaldi-*.AppImage 2>/dev/null | head -n1)
@@ -251,9 +252,6 @@ if [[ "$PUBLISH" == true ]]; then
     UPLOAD_FILES=("$APPIMAGE_FINAL" "SHA256SUMS-APPIMAGE.txt")
     [[ -f "${APPIMAGE_FINAL}.asc" ]] && UPLOAD_FILES+=("${APPIMAGE_FINAL}.asc")
     
-    IS_PRERELEASE=false
-    if [[ "$VER" == *alpha* || "$VER" == *beta* || "$VER" == *rc* ]]; then IS_PRERELEASE=true; fi
-
     if gh release view "v${VER}" --repo "$FULL_REPO" >/dev/null 2>&1; then
         gh release upload "v${VER}" --clobber --repo "$FULL_REPO" "${UPLOAD_FILES[@]}"
         log "✅ AppImage AÑADIDO a la release existente"
@@ -265,7 +263,7 @@ fi
 #===============================================================================
 # RESULTADO FINAL
 #===============================================================================
-header " RESULTADO FINAL"
+header "🎉 RESULTADO FINAL"
 if [[ -f "$APPIMAGE_FINAL" ]]; then
     log "¡ÉXITO! AppImage listo:"
     echo "   📦 $(basename "$APPIMAGE_FINAL")"
