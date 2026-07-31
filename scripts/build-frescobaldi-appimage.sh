@@ -145,16 +145,16 @@ else
 fi
 
 #===============================================================================
-# CONSTRUCCIÓN DEL APPIMAGE AUTOCONTENIDO CON PYTHON-APPIMAGE
+# CONSTRUCCIÓN DEL APPIMAGE AUTOCONTENIDO CON PYINSTALLER
 #===============================================================================
-header "🚀 CONSTRUYENDO APPIMAGE AUTOCONTENIDO"
+header "🚀 CONSTRUYENDO APPIMAGE AUTOCONTENIDO CON PYINSTALLER"
 
-# 1. Definir y preparar el AppDir
+# Paso 1: Definir y preparar el AppDir
 APPDIR="$PROJECT_DIR/AppDir"
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR"
+mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 
-# 2. Crear archivo .desktop
+# Paso 2: Crear archivo .desktop
 log "Creando archivo .desktop..."
 cat > "$APPDIR/frescobaldi.desktop" << 'DESKTOP_EOF'
 [Desktop Entry]
@@ -166,19 +166,24 @@ Type=Application
 Categories=AudioVideo;Music;
 MimeType=text/x-lilypond;
 DESKTOP_EOF
+cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
 
-# 3. Buscar y copiar el ícono
+# Paso 3: Buscar y copiar el ícono
 log "Buscando ícono de Frescobaldi..."
 ICON_PATH=$(find "$PROJECT_DIR" -type f \( -name "frescobaldi.png" -o -name "frescobaldi.svg" \) 2>/dev/null | head -n 1) || true
 
 if [[ -n "$ICON_PATH" ]] && [[ -f "$ICON_PATH" ]]; then
     log "✅ Ícono encontrado: $ICON_PATH"
     cp "$ICON_PATH" "$APPDIR/frescobaldi.png"
+    cp "$ICON_PATH" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
 else
-    log "⚠️  Ícono no encontrado en el código fuente, descargando desde GitHub..."
+    log "⚠️  Ícono no encontrado, descargando desde GitHub..."
     wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/frescobaldi.svg" -O "$APPDIR/frescobaldi.svg" 2>/dev/null || true
-    if [[ ! -f "$APPDIR/frescobaldi.svg" ]]; then
-        # Fallback: crear un placeholder simple en PNG
+    if [[ -f "$APPDIR/frescobaldi.svg" ]]; then
+        cp "$APPDIR/frescobaldi.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.svg"
+        log "✅ Ícono descargado"
+    else
+        # Fallback: crear placeholder
         python3 -c "
 import struct, zlib
 def create_png(filename, width=256, height=256, color=(0, 120, 215)):
@@ -197,79 +202,76 @@ def create_png(filename, width=256, height=256, color=(0, 120, 215)):
         f.write(chunk(b'IEND', b''))
 create_png('$APPDIR/frescobaldi.png')
 "
+        cp "$APPDIR/frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+        log "✅ Placeholder creado"
     fi
 fi
 
-# 4. Instalar python-appimage si no existe
-if ! command -v python-appimage >/dev/null 2>&1; then
-    log "Instalando python-appimage..."
-    python3 -m pip install --break-system-packages python-appimage || die "No se pudo instalar python-appimage"
-fi
+# Paso 4: Crear entorno virtual e instalar dependencias con PyInstaller
+log "Creando entorno virtual para PyInstaller..."
+python3 -m venv "$PROJECT_DIR/venv"
+source "$PROJECT_DIR/venv/bin/activate"
 
+log "Instalando dependencias en el venv..."
+pip install --upgrade pip
+pip install PyQt6 PyQt6-Qt6 PyQt6-sip qpageview python-ly
+pip install "$PROJECT_DIR/dist/"*.whl 2>/dev/null || {
+    python3 -m build --wheel -o "$PROJECT_DIR/dist/" "$PROJECT_DIR"
+    pip install "$PROJECT_DIR/dist/"*.whl
+}
+pip install pyinstaller
+
+# Paso 5: Usar PyInstaller para empaquetar todo
+log "Ejecutando PyInstaller para empaquetar Frescobaldi y todas sus dependencias..."
+pyinstaller --noconfirm --onedir \
+    --name frescobaldi \
+    --distpath "$APPDIR/usr/bin" \
+    --workpath "$PROJECT_DIR/build" \
+    --specpath "$PROJECT_DIR" \
+    "$PROJECT_DIR/venv/bin/frescobaldi"
+
+# Desactivar venv
+deactivate
+
+# Asegurar que el binario sea ejecutable
+chmod +x "$APPDIR/usr/bin/frescobaldi/frescobaldi"
+
+# Paso 6: Crear script AppRun en la raíz del AppDir
+log "Creando AppRun..."
+cat > "$APPDIR/AppRun" << 'APPRUN_EOF'
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/frescobaldi/frescobaldi" "$@"
+APPRUN_EOF
+chmod +x "$APPDIR/AppRun"
+
+# Paso 7: Generar AppImage final con appimagetool
+log "Generando AppImage final con appimagetool..."
 cd "$PROJECT_DIR"
-
-# 5. Crear requirements.txt con todas las dependencias necesarias
-log "Creando requirements.txt para el entorno autocontenido..."
-cat > requirements.txt << 'REQEOF'
-PyQt6>=6.4.0
-PyQt6-Qt6>=6.4.0
-PyQt6-sip>=13.0.0
-qpageview>=1.0.0
-python-ly>=0.9.0
-REQEOF
-
-# Copiar metadatos a la raíz del directorio de trabajo (python-appimage los busca ahí)
-cp "$APPDIR/frescobaldi.desktop" .
-# Copiar el ícono (ya sea .png o .svg)
-if [[ -f "$APPDIR/frescobaldi.png" ]]; then
-    cp "$APPDIR/frescobaldi.png" .
-elif [[ -f "$APPDIR/frescobaldi.svg" ]]; then
-    cp "$APPDIR/frescobaldi.svg" .
-fi
-
-# 6. Preparar directorio fuente con Frescobaldi instalado
-log "Preparando directorio fuente con Frescobaldi..."
-SOURCE_DIR="$PROJECT_DIR/app_source"
-rm -rf "$SOURCE_DIR"
-mkdir -p "$SOURCE_DIR"
-
-# Instalar Frescobaldi, qpageview y python-ly en el directorio fuente
-log "Instalando dependencias en directorio fuente..."
-python3 -m pip install --no-deps --target="$SOURCE_DIR" "$PROJECT_DIR/dist/"*.whl 2>/dev/null || \
-python3 -m build --wheel -o "$PROJECT_DIR/dist/" "$PROJECT_DIR" && \
-python3 -m pip install --no-deps --target="$SOURCE_DIR" "$PROJECT_DIR/dist/"*.whl
-
-python3 -m pip install --no-deps --target="$SOURCE_DIR" qpageview python-ly
-
-# Crear script ejecutable de entrada (con nombre que no colisione con el paquete)
-cat > "$SOURCE_DIR/frescobaldi_app" << 'ENTRYEOF'
-#!/usr/bin/env python3
-import sys
-from frescobaldi.__main__ import main
-sys.exit(main())
-ENTRYEOF
-chmod +x "$SOURCE_DIR/frescobaldi_app"
-
-# 7. Generar el AppImage autocontenido con sintaxis correcta
-log "Generando AppImage autocontenido (esto puede tardar unos minutos)..."
-python-appimage build app \
-    -p 3.13 \
-    -r requirements.txt \
-    --name Frescobaldi \
-    --executable-name frescobaldi_app \
-    --desktop-file frescobaldi.desktop \
-    --icon frescobaldi.png \
-    --category AudioVideo \
-    "$SOURCE_DIR" \
-    || die "python-appimage build falló"
-
+ARCH=x86_64 "$TOOLS_DIR/appimagetool-x86_64.AppImage" "$APPDIR" || die "appimagetool falló"
 cd ..
+
+# Buscar el AppImage generado
+APPIMAGE_FILE=$(ls "$PROJECT_DIR"/Frescobaldi-*.AppImage 2>/dev/null | head -n1)
+[[ -z "$APPIMAGE_FILE" ]] && die "No se generó el AppImage"
+
+APPIMAGE_FINAL="frescobaldi-${VER}-qt6-x86_64.AppImage"
+mv -f "$APPIMAGE_FILE" "$APPIMAGE_FINAL"
+sha256sum "$APPIMAGE_FINAL" > SHA256SUMS-APPIMAGE.txt
+
+# Paso 8: Firma GPG
+if [[ "$SIGN" == true ]]; then
+    header "🔐 FIRMANDO CON GPG"
+    [[ -z "$GPG_KEY" ]] && GPG_KEY=$(gpg --list-secret-keys --keyid-format long | grep "^sec" | head -n1 | awk '{print $2}' | cut -d'/' -f2)
+    gpg --default-key "$GPG_KEY" --yes --detach-sign --armor "$APPIMAGE_FINAL"
+    log "✅ Firma generada: ${APPIMAGE_FINAL}.asc"
+fi
 
 #===============================================================================
 # PUBLICACIÓN EN GITHUB
 #===============================================================================
 if [[ "$PUBLISH" == true ]]; then
-    header "🌐 PUBLICANDO EN GITHUB RELEASES"
+    header " PUBLICANDO EN GITHUB RELEASES"
     gh auth status >/dev/null 2>&1 || die "No autenticado en GitHub CLI"
     FULL_REPO="${GITHUB_USER}/${REPO_NAME}"
     UPLOAD_FILES=("$APPIMAGE_FINAL" "SHA256SUMS-APPIMAGE.txt")
@@ -290,9 +292,9 @@ header "🎉 RESULTADO FINAL"
 if [[ -f "$APPIMAGE_FINAL" ]]; then
     log "¡ÉXITO! AppImage autocontenido listo:"
     echo "   📦 $(basename "$APPIMAGE_FINAL")"
-    echo "   📍 $(pwd)/$APPIMAGE_FINAL"
+    echo "    $(pwd)/$APPIMAGE_FINAL"
     echo "   🔧 Tamaño: $(du -h "$APPIMAGE_FINAL" | cut -f1)"
-    echo "   🐍 Incluye: Python 3.13, PyQt6, qpageview, python-ly"
+    echo "   🐍 Incluye: Python, PyQt6, qpageview, python-ly (PyInstaller)"
     [[ -f "${APPIMAGE_FINAL}.asc" ]] && echo "   🔐 Firma: $(basename "${APPIMAGE_FINAL}.asc")"
     echo ""
     echo "▶  Para ejecutar:"
