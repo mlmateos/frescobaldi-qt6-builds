@@ -144,11 +144,11 @@ fi
 header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
-# Pre-calcular las dependencias para evitar errores de sintaxis con paréntesis en Bash
+# Pre-calcular las dependencias
 if [[ "$ENABLE_POPPLER" == true ]]; then
-    DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, python3-ly, python3-qpageview, poppler-utils, lilypond (>= 2.24)"
+    DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)"
 else
-    DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, python3-ly, python3-qpageview, lilypond (>= 2.24)"
+    DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, lilypond (>= 2.24)"
 fi
 
 cat <<EOF > "$PROJECT_DIR/debian/control"
@@ -223,25 +223,35 @@ frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
 EOF
 echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
 
-# debian/rules - GENERADO CON PRINTF LÍNEA POR LÍNEA (v2.9)
-RULES_FILE="$PROJECT_DIR/debian/rules"
-printf '#!/usr/bin/make -f\n' > "$RULES_FILE"
-printf 'export DH_VERBOSE = 1\n' >> "$RULES_FILE"
-printf '%%:\n' >> "$RULES_FILE"
-printf '\tdh $@\n\n' >> "$RULES_FILE"
-printf 'override_dh_auto_build:\n' >> "$RULES_FILE"
-printf '\tpython3 -m build --wheel\n\n' >> "$RULES_FILE"
-printf 'override_dh_auto_install:\n' >> "$RULES_FILE"
-printf '\tpython3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl\n' >> "$RULES_FILE"
-printf '\tmkdir -p debian/frescobaldi/usr/bin\n' >> "$RULES_FILE"
-printf '\tprintf "#!/usr/bin/python3\\nimport sys\\nsys.path.insert(0, \\'/usr/lib/python3/dist-packages\\')\\nfrom frescobaldi.__main__ import main\\nsys.exit(main())\\n" > debian/frescobaldi/usr/bin/frescobaldi\n' >> "$RULES_FILE"
-printf '\tchmod +x debian/frescobaldi/usr/bin/frescobaldi\n' >> "$RULES_FILE"
-printf '\tPKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)\n' >> "$RULES_FILE"
-printf '\tif [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi\n' >> "$RULES_FILE"
-printf '\noverride_dh_usrlocal:\n\n' >> "$RULES_FILE"
-printf 'override_dh_strip:\n' >> "$RULES_FILE"
-printf '\tdh_strip --no-automatic-dbgsym\n' >> "$RULES_FILE"
-chmod +x "$RULES_FILE"
+# debian/rules - INSTALA QPAGEVIEW Y PYTHON-LY DESDE PYPI (PyQt6 compatible)
+cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+%:
+	dh $@
+
+override_dh_auto_build:
+	python3 -m build --wheel
+
+override_dh_auto_install:
+	# Instalar Frescobaldi
+	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
+	# Instalar qpageview y python-ly desde PyPI (compatibles con PyQt6)
+	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages qpageview python-ly
+	# Crear el ejecutable
+	mkdir -p debian/frescobaldi/usr/bin
+	cp $(CURDIR)/frescobaldi-wrapper.sh debian/frescobaldi/usr/bin/frescobaldi
+	chmod +x debian/frescobaldi/usr/bin/frescobaldi
+	# Optimización: Poda de localizaciones
+	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
+	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi
+
+override_dh_usrlocal:
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+RULES_EOF
+chmod +x "$PROJECT_DIR/debian/rules"
 
 log "✅ debian/rules generado correctamente"
 
