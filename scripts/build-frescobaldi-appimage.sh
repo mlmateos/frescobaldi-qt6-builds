@@ -130,8 +130,17 @@ script:
   - pip install --upgrade pip build hatchling
   - cd src && python3 -m build --wheel && cd ..
   - pip install src/dist/*.whl
-  # ✂️ Optimización: Poda de traducciones
-  - find AppDir/usr/src/venv/lib/python3.*/site-packages/frescobaldi_app/locale -type f -name "*.mo" | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true
+  # ✂️ Optimización: Solo bytecode -OO (MANTENEMOS TODOS LOS IDIOMAS)
+log "⚡ Optimizando: Bytecode Python sin docstrings (-OO)..."
+PKG_DIR=$(find "$APPDIR/usr/lib" -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
+if [[ -n "$PKG_DIR" ]] && [[ -d "$PKG_DIR" ]]; then
+	log "   📂 Directorio encontrado: $PKG_DIR"
+	python3 -OO -m compileall "$PKG_DIR"
+	find "$PKG_DIR" -name "*.py" -delete || true
+	log "✅ Optimización -OO completada (todos los idiomas conservados)"
+else
+	warn "⚠️ No se encontró el directorio del paquete para optimizar"
+fi
   # ⚡ Optimización: Bytecode sin docstrings
   - python3 -OO -m compileall AppDir/usr/src/venv/lib/python3.*/site-packages/frescobaldi_app
   - find AppDir/usr/src/venv/lib/python3.*/site-packages/frescobaldi_app -name "*.py" -delete || true

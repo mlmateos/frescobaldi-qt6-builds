@@ -10,7 +10,7 @@ Custom, optimized builds of [Frescobaldi](https://github.com/frescobaldi/frescob
 
 ### ✨ Features
 - 🎨 **PyQt6 / Qt 6.8.x LTS** — Modern UI/UX with long-term stability.
-- ✂️ **Aggressive Optimization** — Locale pruning (only `es_ES`, `es_MX`, `en_US`, `en_GB`, `fr_FR`) and Python bytecode optimization (`-OO`) to remove docstrings, reducing package size significantly.
+- ⚡ **Optimization** — Python bytecode optimized (`-OO`) to remove docstrings while keeping all translations for international users.
 - 🔐 **GPG-signed packages** — Cryptographic security verification for all releases and repository metadata.
 - 📦 **Two distribution methods**: `.deb` packages for Debian/Ubuntu-based distributions, and `AppImage` for any Linux distribution.
 - 🛠️ **Automated build scripts** — Compile your own optimized version easily.
@@ -134,7 +134,7 @@ Both build scripts support the following options for consistency with your workf
 - 🏷️ Detect version from git tags
 - 🛠️ Apply custom patches (Add custom credits to the About dialog)
 - 🔨 Build Python wheel and package the result (`.deb` or `AppImage`)
-- ✂️ Apply optimizations (Locale pruning, Python `-OO` bytecode)
+- ⚡ Python bytecode optimized (`-OO`) to remove docstrings while keeping all translations for international users.
 - 🔐 Sign with GPG (if `--sign`)
 - 🌐 Publish to GitHub Releases (if `--publish`)
 - 🗄️ Update APT repository with proper branch classification (`.deb` only)
@@ -176,7 +176,7 @@ This project (build scripts and infrastructure) is licensed under the MIT Licens
 Frescobaldi itself is licensed under GPL-3.0+.
 
 ### 🤖 Acknowledgments
-This project was developed with the valuable assistance of **Qwen (Qwen3.7)**, a large language model by Alibaba Group, which contributed to the design, optimization strategies (locale pruning, bytecode optimization), and automation of the build scripts, ensuring best practices for packaging PyQt6 applications on Linux.
+This project was developed with the valuable assistance of **Qwen (Qwen3.7)**, a large language model by Alibaba Group, which contributed to the design, optimization strategies (bytecode optimization), and automation of the build scripts, ensuring best practices for packaging PyQt6 applications on Linux.
 
 Special thanks to the original [Frescobaldi](https://github.com/frescobaldi/frescobaldi) developers and contributors.
 

@@ -223,7 +223,7 @@ frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
 EOF
 echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
 
-# debian/rules - INSTALA QPAGEVIEW Y PYTHON-LY DESDE PYPI (PyQt6 compatible)
+# debian/rules - MANTIENE TODOS LOS IDIOMAS (solo optimización -OO)
 cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
@@ -242,9 +242,12 @@ override_dh_auto_install:
 	mkdir -p debian/frescobaldi/usr/bin
 	cp $(CURDIR)/frescobaldi-wrapper.sh debian/frescobaldi/usr/bin/frescobaldi
 	chmod +x debian/frescobaldi/usr/bin/frescobaldi
-	# Optimización: Poda de localizaciones
+	# Optimización: Solo bytecode -OO (MANTENEMOS TODOS LOS IDIOMAS)
 	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
-	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi
+	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then
+		python3 -OO -m compileall "$$PKG_DIR"
+		find "$$PKG_DIR" -name "*.py" -delete || true
+	fi
 
 override_dh_usrlocal:
 
