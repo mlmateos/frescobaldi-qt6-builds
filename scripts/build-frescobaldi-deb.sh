@@ -234,20 +234,13 @@ override_dh_auto_build:
 	python3 -m build --wheel
 
 override_dh_auto_install:
-	# Instalar Frescobaldi
 	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
-	# Instalar qpageview y python-ly desde PyPI (compatibles con PyQt6)
 	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages qpageview python-ly
-	# Crear el ejecutable
 	mkdir -p debian/frescobaldi/usr/bin
 	cp $(CURDIR)/frescobaldi-wrapper.sh debian/frescobaldi/usr/bin/frescobaldi
 	chmod +x debian/frescobaldi/usr/bin/frescobaldi
-	# Optimización: Solo bytecode -OO (MANTENEMOS TODOS LOS IDIOMAS)
 	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
-	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then
-		python3 -OO -m compileall "$$PKG_DIR"
-		find "$$PKG_DIR" -name "*.py" -delete || true
-	fi
+	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi
 
 override_dh_usrlocal:
 
