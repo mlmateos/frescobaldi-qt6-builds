@@ -174,6 +174,50 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
+# debian/rules - GENERADO CON CAT Y ECHO (Inmune a errores de escapes)
+# NOTA: Asegúrate de que las líneas debajo de 'override_...' empiecen con un TAB real, no espacios.
+cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+%:
+	dh $@
+
+override_dh_auto_build:
+	python3 -m build --wheel
+
+override_dh_auto_install:
+	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
+	mkdir -p debian/frescobaldi/usr/bin
+	echo '#!/usr/bin/env python3' > debian/frescobaldi/usr/bin/frescobaldi
+	echo 'import sys' >> debian/frescobaldi/usr/bin/frescobaldi
+	echo "sys.path.insert(0, '/usr/lib/python3/dist-packages')" >> debian/frescobaldi/usr/bin/frescobaldi
+	echo 'from frescobaldi.__main__ import main' >> debian/frescobaldi/usr/bin/frescobaldi
+	echo 'sys.exit(main())' >> debian/frescobaldi/usr/bin/frescobaldi
+	chmod +x debian/frescobaldi/usr/bin/frescobaldi
+	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
+	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi
+
+override_dh_usrlocal:
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+RULES_EOF
+chmod +x "$PROJECT_DIR/debian/rules"
+
+log "✅ debian/rules generado correctamente con eco seguro"
+
+FECHA=$(date -R)
+cat <<EOF > "$PROJECT_DIR/debian/changelog"
+frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
+
+  * Custom optimized build from upstream tag ${VER_GIT}.
+  * PyQt6, locale pruning, Python -OO bytecode optimization.
+  * Fixed executable wrapper generation to avoid syntax errors.
+
+ -- Manuel Mateos <manuel@mateos.dev>  ${FECHA}
+EOF
+echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
+
 # debian/rules - GENERADO CON PRINTF LÍNEA POR LÍNEA (v2.9)
 RULES_FILE="$PROJECT_DIR/debian/rules"
 printf '#!/usr/bin/make -f\n' > "$RULES_FILE"
