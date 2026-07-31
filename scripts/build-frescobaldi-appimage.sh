@@ -241,14 +241,14 @@ python3 -m pip install --no-deps --target="$SOURCE_DIR" "$PROJECT_DIR/dist/"*.wh
 
 python3 -m pip install --no-deps --target="$SOURCE_DIR" qpageview python-ly
 
-# Crear script ejecutable de entrada
-cat > "$SOURCE_DIR/frescobaldi" << 'ENTRYEOF'
+# Crear script ejecutable de entrada (con nombre que no colisione con el paquete)
+cat > "$SOURCE_DIR/frescobaldi_app" << 'ENTRYEOF'
 #!/usr/bin/env python3
 import sys
 from frescobaldi.__main__ import main
 sys.exit(main())
 ENTRYEOF
-chmod +x "$SOURCE_DIR/frescobaldi"
+chmod +x "$SOURCE_DIR/frescobaldi_app"
 
 # 7. Generar el AppImage autocontenido con sintaxis correcta
 log "Generando AppImage autocontenido (esto puede tardar unos minutos)..."
@@ -256,6 +256,7 @@ python-appimage build app \
     -p 3.13 \
     -r requirements.txt \
     --name Frescobaldi \
+    --executable-name frescobaldi_app \
     --desktop-file frescobaldi.desktop \
     --icon frescobaldi.png \
     --category AudioVideo \
