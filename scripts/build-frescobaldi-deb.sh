@@ -144,6 +144,7 @@ fi
 header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
+# debian/control - VERSIÓN CORREGIDA (paréntesis escapados)
 cat <<EOF > "$PROJECT_DIR/debian/control"
 Source: frescobaldi
 Section: editors
@@ -156,7 +157,7 @@ Rules-Requires-Root: no
 
 Package: frescobaldi
 Architecture: all
-Depends: python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, python3-ly, python3-qpageview, $( [[ "$ENABLE_POPPLER" == true ]] && echo "poppler-utils, " )lilypond (>= 2.24)
+Depends: python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, python3-ly, python3-qpageview, $( [[ "$ENABLE_POPPLER" == true ]] && echo "poppler-utils, " )lilypond \(>= 2.24\)
 Recommends: lilypond
 Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  Frescobaldi is an advanced text editor for LilyPond music scores.
