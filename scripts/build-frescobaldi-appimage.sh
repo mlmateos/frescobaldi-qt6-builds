@@ -183,46 +183,74 @@ MimeType=text/x-lilypond;
 DESKTOP_EOF
 cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
 
-# Copiar icono (buscar en múltiples ubicaciones típicas)
+# Copiar icono (buscar exhaustivamente en el código fuente)
 log "Buscando ícono de Frescobaldi..."
 ICON_FOUND=false
 
-# Intentar múltiples nombres y ubicaciones comunes
-for ICON_PATH in \
-    "$PROJECT_DIR/frescobaldi.png" \
-    "$PROJECT_DIR/frescobaldi.svg" \
-    "$PROJECT_DIR/icons/frescobaldi.png" \
-    "$PROJECT_DIR/icons/frescobaldi.svg" \
-    "$PROJECT_DIR/frescobaldi_app/icons/frescobaldi.png" \
-    "$PROJECT_DIR/frescobaldi_app/icons/frescobaldi.svg"; do
-    if [[ -f "$ICON_PATH" ]]; then
-        log "✅ Ícono encontrado: $ICON_PATH"
+# Buscar en TODO el directorio del proyecto clonado
+ICON_PATH=$(find "$PROJECT_DIR" -type f \( -name "frescobaldi.png" -o -name "frescobaldi.svg" -o -name "frescobaldi.xpm" \) | grep -i icon | head -n 1)
+
+if [[ -n "$ICON_PATH" ]] && [[ -f "$ICON_PATH" ]]; then
+    log "✅ Ícono encontrado: $ICON_PATH"
+    cp "$ICON_PATH" "$APPDIR/frescobaldi.png"
+    cp "$ICON_PATH" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+    ICON_FOUND=true
+fi
+
+# Si no se encontró, buscar sin filtrar por "icon"
+if [[ "$ICON_FOUND" == false ]]; then
+    ICON_PATH=$(find "$PROJECT_DIR" -type f \( -name "frescobaldi.png" -o -name "frescobaldi.svg" \) | head -n 1)
+    if [[ -n "$ICON_PATH" ]] && [[ -f "$ICON_PATH" ]]; then
+        log "✅ Ícono encontrado (búsqueda amplia): $ICON_PATH"
         cp "$ICON_PATH" "$APPDIR/frescobaldi.png"
         cp "$ICON_PATH" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
         ICON_FOUND=true
-        break
     fi
-done
-
-# Si no se encontró, descargar desde el repositorio oficial
-if [[ "$ICON_FOUND" == false ]]; then
-    log "⚠️  Ícono no encontrado, descargando desde GitHub..."
-    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/main/frescobaldi_app/icons/frescobaldi.svg" \
-        -O "$APPDIR/frescobaldi.png" || \
-    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/4.0.7/frescobaldi_app/icons/frescobaldi.svg" \
-        -O "$APPDIR/frescobaldi.png" || \
-    die "No se pudo descargar el ícono"
-    cp "$APPDIR/frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
-    log "✅ Ícono descargado y colocado"
 fi
 
-# 4. Optimización -OO (MANTENEMOS TODOS LOS IDIOMAS)
-log "⚡ Aplicando optimización -OO..."
-PKG_DIR=$(find "$APPDIR/usr/lib/python3/dist-packages" -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
-if [[ -n "$PKG_DIR" ]] && [[ -d "$PKG_DIR" ]]; then
-    python3 -OO -m compileall "$PKG_DIR"
-    find "$PKG_DIR" -name "*.py" -delete || true
-    log "✅ Optimización completada"
+# Si aún no se encuentra, descargar desde GitHub con URL correcta
+if [[ "$ICON_FOUND" == false ]]; then
+    log "⚠️  Ícono no encontrado, descargando desde GitHub..."
+    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/frescobaldi.svg" \
+        -O "$APPDIR/frescobaldi.png" 2>/dev/null && ICON_FOUND=true
+    
+    if [[ "$ICON_FOUND" == false ]]; then
+        # Intentar con la rama main
+        wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/main/frescobaldi_app/icons/frescobaldi.svg" \
+            -O "$APPDIR/frescobaldi.png" 2>/dev/null && ICON_FOUND=true
+    fi
+    
+    if [[ "$ICON_FOUND" == true ]]; then
+        cp "$APPDIR/frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+        log "✅ Ícono descargado y colocado"
+    else
+        # Último recurso: crear un ícono placeholder
+        log "⚠️  No se pudo descargar el ícono, creando placeholder..."
+        convert -size 256x256 xc:blue "$APPDIR/frescobaldi.png" 2>/dev/null || \
+        python3 -c "
+import struct, zlib
+def create_png(filename, width=256, height=256, color=(0, 120, 215)):
+    def chunk(chunk_type, data):
+        c = chunk_type + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+    with open(filename, 'wb') as f:
+        f.write(b'\x89PNG\r\n\x1a\n')
+        f.write(chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)))
+        raw = b''
+        for y in range(height):
+            raw += b'\x00'
+            for x in range(width):
+                raw += bytes(color)
+        f.write(chunk(b'IDAT', zlib.compress(raw)))
+        f.write(chunk(b'IEND', b''))
+create_png('$APPDIR/frescobaldi.png')
+" && ICON_FOUND=true
+        cp "$APPDIR/frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+    fi
+fi
+
+if [[ "$ICON_FOUND" == false ]]; then
+    die "No se pudo obtener el ícono de Frescobaldi"
 fi
 
 #===============================================================================
