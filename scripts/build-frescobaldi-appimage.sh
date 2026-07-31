@@ -228,6 +228,13 @@ pyinstaller --noconfirm --onedir \
     --distpath "$APPDIR/usr/bin" \
     --workpath "$PROJECT_DIR/build" \
     --specpath "$PROJECT_DIR" \
+    --hidden-import frescobaldi.checks \
+    --hidden-import frescobaldi.app \
+    --hidden-import frescobaldi.mainwindow \
+    --hidden-import frescobaldi.panelmanager \
+    --hidden-import frescobaldi.plugin \
+    --hidden-import qpageview \
+    --hidden-import ly \
     "$PROJECT_DIR/venv/bin/frescobaldi"
 
 # Desactivar venv
