@@ -227,33 +227,42 @@ elif [[ -f "$APPDIR/frescobaldi.svg" ]]; then
     cp "$APPDIR/frescobaldi.svg" .
 fi
 
-# 6. Generar el AppImage autocontenido
+# 6. Preparar directorio fuente con Frescobaldi instalado
+log "Preparando directorio fuente con Frescobaldi..."
+SOURCE_DIR="$PROJECT_DIR/app_source"
+rm -rf "$SOURCE_DIR"
+mkdir -p "$SOURCE_DIR"
+
+# Instalar Frescobaldi, qpageview y python-ly en el directorio fuente
+log "Instalando dependencias en directorio fuente..."
+python3 -m pip install --no-deps --target="$SOURCE_DIR" "$PROJECT_DIR/dist/"*.whl 2>/dev/null || \
+python3 -m build --wheel -o "$PROJECT_DIR/dist/" "$PROJECT_DIR" && \
+python3 -m pip install --no-deps --target="$SOURCE_DIR" "$PROJECT_DIR/dist/"*.whl
+
+python3 -m pip install --no-deps --target="$SOURCE_DIR" qpageview python-ly
+
+# Crear script ejecutable de entrada
+cat > "$SOURCE_DIR/frescobaldi" << 'ENTRYEOF'
+#!/usr/bin/env python3
+import sys
+from frescobaldi.__main__ import main
+sys.exit(main())
+ENTRYEOF
+chmod +x "$SOURCE_DIR/frescobaldi"
+
+# 7. Generar el AppImage autocontenido con sintaxis correcta
 log "Generando AppImage autocontenido (esto puede tardar unos minutos)..."
 python-appimage build app \
-    --python-version 3.13 \
-    --entry-point frescobaldi.__main__:main \
-    --executable-name frescobaldi \
-    --requirements requirements.txt \
+    -p 3.13 \
+    -r requirements.txt \
+    --name Frescobaldi \
     --desktop-file frescobaldi.desktop \
     --icon frescobaldi.png \
+    --category AudioVideo \
+    "$SOURCE_DIR" \
     || die "python-appimage build falló"
 
 cd ..
-
-# 7. Buscar el AppImage generado
-APPIMAGE_FILE=$(ls "$PROJECT_DIR"/Frescobaldi-*.AppImage 2>/dev/null | head -n1)
-[[ -z "$APPIMAGE_FILE" ]] && die "No se generó el AppImage"
-
-APPIMAGE_FINAL="frescobaldi-${VER}-qt6-x86_64.AppImage"
-mv -f "$APPIMAGE_FILE" "$APPIMAGE_FINAL"
-sha256sum "$APPIMAGE_FINAL" > SHA256SUMS-APPIMAGE.txt
-
-if [[ "$SIGN" == true ]]; then
-    header "🔐 FIRMANDO CON GPG"
-    [[ -z "$GPG_KEY" ]] && GPG_KEY=$(gpg --list-secret-keys --keyid-format long | grep "^sec" | head -n1 | awk '{print $2}' | cut -d'/' -f2)
-    gpg --default-key "$GPG_KEY" --yes --detach-sign --armor "$APPIMAGE_FINAL"
-    log "✅ Firma generada: ${APPIMAGE_FINAL}.asc"
-fi
 
 #===============================================================================
 # PUBLICACIÓN EN GITHUB
