@@ -5,45 +5,45 @@ Origin: mlmateos
 Label: Frescobaldi Qt6 Builds
 Suite: stable
 Codename: stable
-Date: Thu, 30 Jul 2026 18:10:18 -0600
+Date: Thu, 30 Jul 2026 18:19:53 -0600
 Architectures: amd64
 Components: main
 Description: Frescobaldi Qt6 Builds Repository (Stable)
 Acquire-By-Hash: no
-Date: Fri, 31 Jul 2026 00:10:18 +0000
+Date: Fri, 31 Jul 2026 00:19:53 +0000
 MD5Sum:
- 46b8e9f9e92d071d2b793d8845dc1807             2030 Release
- 59ce1b9103ea8ac98976ab3b50af9729              868 main/binary-amd64/Packages
- 8876457e7b5b71c5ae9a699e46e6c050              568 main/binary-amd64/Packages.gz
+ 0b48b4a1c15653b298889338be40799c             2030 Release
+ e40214cb329314507e71ac894a430382              868 main/binary-amd64/Packages
+ b8067309f7e9664576da539200378229              566 main/binary-amd64/Packages.gz
  60aec7a09a9d05f3d96d98c6aae55869               47 main/i18n/Translation-en.gz
 SHA1:
- c8c74f32246c96cb611d8ad8bbb3922836fefbc3             2030 Release
- 58bc478180732a65e255484955aa670a6cec2773              868 main/binary-amd64/Packages
- 1668d9609a752599c46185cb06fd55f732db4f53              568 main/binary-amd64/Packages.gz
+ 17cb971ad608f63a009bc0bdb23307f8fdb097ea             2030 Release
+ 456dc64e7a1f5d66c39c663fb75269d7efc9cd2d              868 main/binary-amd64/Packages
+ 5517b509ffefc7eceeb1bd0508368d899e06dda0              566 main/binary-amd64/Packages.gz
  cd62d0196f86040100a40b66ec2fa2df91765f6f               47 main/i18n/Translation-en.gz
 SHA256:
- 2246757fd88fe4d89f9fafefd8dc3610424c745d9a1ced9d7701ee84cc0b2f20             2030 Release
- 45ce22b7b21c6ebc8ae90e7e13eb530b8134fedbde67e98757c0b6621b42bd65              868 main/binary-amd64/Packages
- 1d0ce548f96b773beb93dd7092464231ddc56e3bfa45769fc1ee949a247ecfd6              568 main/binary-amd64/Packages.gz
+ e947f657e2ed7e782df1b90a4933251eb8f3737b1d188312dbc606e69f747e50             2030 Release
+ 7e56e5e8b1e60b9ba3ba9fd3f9cf71fa1ad555cf8af3abc83790e7387594fa70              868 main/binary-amd64/Packages
+ 1b18d635a46f17c06b8405a1ab7b1e3ffc24b12b0a213846b699915887fc4391              566 main/binary-amd64/Packages.gz
  55cc0693ffd22340d72ceb31a84e4bf7aadf023f7e86658bc99de5b2fedbc89c               47 main/i18n/Translation-en.gz
 SHA512:
- c7c0a4dd55877195416efa98d268979421ff10c2c1cee19d8aa69d8bdfe01985eee0bc7ab90b2403d63e286c78039b6dc1140887dc98bbfe8371bf7a25f9153f             2030 Release
- f3a3a3c201411a8e316027b5bb7e8d0d0db5d3751d3444839e552128629a25266cbe359f89d4f74ed830e5db6ba629445c62e5778955e6cfd25d16231e5c5f8d              868 main/binary-amd64/Packages
- 2f3aee09373de80b54ebd5cc63a7d9d05d17a5cbcf7f6d7c4dfb3b710409e050dae005846a827c83d560f83341ecd08e1c920d28fdc3240d59e9c3d2be44d16a              568 main/binary-amd64/Packages.gz
+ 0670e50e749b16957f81261e8e219fa46a4e6065553b2f67dddd23bc2b9c0cd98e336487d4861438c847c97bcd4e768728a160ce483b4f7d5debbf564edf8c91             2030 Release
+ 4cbf9240dc7f5a428e6aeceae49babbbec7d106a85563a9eccd7d065559dc68c3c0022a1a43df145a1286ca57d536cfbbe9a318d6e6bfed47cd9af62fc16fd8a              868 main/binary-amd64/Packages
+ 5de16cb234ac2e24725a983400ff59c62e7d87794cf079d636c2518ddc9ca4ff8736792fea50d7c241632a875ca7462c87ff6ec5eb10612dc8fb683141982849              566 main/binary-amd64/Packages.gz
  30ca4fafc8fe62ea58f2886794809aff5ac36ff8153510b485f76d46f4ecaf85e485115c128cd411919dab34e6398fbfc53a79f184620346b28ebfc7fc07ba21               47 main/i18n/Translation-en.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEfmmrpsk0rLg38D5/eDwSuedGMVQFAmpr5+sACgkQeDwSuedG
-MVTFCA/9GTBJd1r99Jz3nn9G1YCHBY/PlS24vhG3AGbZl/2GGAQkbwz6sJECoMu/
-KeD/V5gni4yxIZxxRE4Fg41X+NaORDWpXIQVnaYEr+GlA/r4wrbgSqqzb1KWO8E9
-WdIocTVV+NX3yhhZAaSaszWb6I6akcwvAwbpNtPWk2rSLjJ1CKKwvnM6BEo5yoX4
-/NASTKw41vJ9M1Fjan0rKUMzfIvtlywTkvbxtdBHLT7KqIQEIG3zLM4Q3oqjACZc
-kpCojRw0HyNVCK3AzUAoetpRVZVghSvuYQlrEYvLxTJYbzqO6hb7/hheo9ElUXhX
-5NnjdU/MFCg9p1BAhDi5AQzIRXxuJk19h4nJwBFGZOlUJgErk/6kqczbf1aK55Hv
-S0nH6tur9PeseMVwdyIkbLX3GOVql8KF2OpiZIWN3x10Dj+GSz+EcckJnuez/cAF
-i9xyoCtIcCG0hIYsP9sCJv3MAqisYT1CaUOsJROo20T1m6LhA45q2L96f5lSaZgT
-u1x/gWmsf052+IE5lyqVDJWCxd1POlflkkwA46SL6/11lRSdPKYU2SmnoTq+9qbS
-8b/FaSvXWmfP+QJNbBKhX6yFIcz4ZyZLphsKITuqov/94DH0iRPEGScRypw954Z6
-Gc9pjfYAMJsGhgzhNv79Ahgz0nOfrK0VWs1HLlpktcs1moCYEcw=
-=bO7b
+iQIzBAEBCgAdFiEEfmmrpsk0rLg38D5/eDwSuedGMVQFAmpr6ikACgkQeDwSuedG
+MVT16xAAmJWAfSPwPH4+fL7/GfPSkpDMlOwfKZgckSLLagrsYyAF6KuC+zzclFCb
+2asRVZGKk3+NC/y3sBevPfED4REca2cN3A7BOIbQxJl0tJB47g6QiWeCLhRNxP30
+BSiMy65CgVwjHCoi3rjz8j8iJE2Pq7CaDZ5IgWVmZOHKjSCivrP9LZ7FV3g3qy2L
+JXXAeyMcnYAC2kDWPkQfGKe9bL0gmCBithFNHLTKe5jkBAC7qGGHXbjezq8VQQb6
+Ker9qBTbaNOY0H4ADIDEputkpLFSRVw7Zl5YOOkGg3BmMN7YDYxIYG0HVCvIFeDU
+sSFYROkasMmXooTusbF+9QIrW4QxC1hOwMUlgJaHl6dZ8rtZoN4K8/zhCH1s+1hf
+SGkPb7e1gxqXN+SFfy20KWeNKhfMniGVfGHnUhsguxXCGIvC0XIjt8CNroA95j1/
+f7YzyLFNGJfmHExnVMRXokQtSB6EdXlMzg/Xx3hdpy/WkopFBpIQD6Bvw6RMSiu+
+7wStFy4iNELPwG1DDFVxfnfcVcAlfAPcxX8zsX6vD/vsAEpqd+KDLNZ8VHKoM4W5
+j8O31cM/Wlzybqg8eVawv2wPOSGa5CR972OGdwAh4d/XQTB1HcdBMrdw56loOTuN
+Hpx53ZJDOl4aEF4hfKvx/uZtGt3kEIu7uTRshSQNGx11NXM9Y50=
+=MF1Q
 -----END PGP SIGNATURE-----
