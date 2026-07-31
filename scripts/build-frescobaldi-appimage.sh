@@ -157,40 +157,36 @@ fi
 
 cd "$PROJECT_DIR"
 
-# Crear requirements.txt con todas las dependencias
-log "Creando requirements.txt..."
+# Crear requirements.txt con todas las dependencias necesarias
+log "Creando requirements.txt para el entorno autocontenido..."
 cat > requirements.txt << 'REQEOF'
-qpageview>=1.0.0
-python-ly>=0.9.0
 PyQt6>=6.4.0
 PyQt6-Qt6>=6.4.0
 PyQt6-sip>=13.0.0
+qpageview>=1.0.0
+python-ly>=0.9.0
 REQEOF
 
-# Descargar e instalar Python portable para AppImage
-PYTHON_VERSION="3.13"
-log "Descargando Python ${PYTHON_VERSION} para AppImage..."
-python-appimage get python ${PYTHON_VERSION} || die "No se pudo descargar Python"
+# Asegurarnos de que los metadatos estén en el directorio actual para python-appimage
+cp "$APPDIR/frescobaldi.desktop" .
+cp "$APPDIR/frescobaldi.png" .
 
-# Instalar dependencias en el entorno de Python portable
-log "Instalando dependencias (PyQt6, qpageview, python-ly)..."
-python-appimage install -p ${PYTHON_VERSION} -r requirements.txt || die "No se pudieron instalar las dependencias"
-
-# Crear el AppImage final
-log "Generando AppImage autocontenido..."
+# Generar el AppImage autocontenido
+# python-appimage se encarga de descargar Python 3.13 y las dependencias automáticamente
+log "Generando AppImage autocontenido (esto puede tardar unos minutos)..."
 python-appimage build app \
-    --python-version ${PYTHON_VERSION} \
+    --python-version 3.13 \
     --entry-point frescobaldi.__main__:main \
     --executable-name frescobaldi \
-    --desktop-file "$APPDIR/frescobaldi.desktop" \
-    --icon "$APPDIR/frescobaldi.png" \
-    --category AudioVideo \
+    --requirements requirements.txt \
+    --desktop-file frescobaldi.desktop \
+    --icon frescobaldi.png \
     || die "python-appimage build falló"
 
 cd ..
 
-# Buscar el AppImage generado (python-appimage lo pone en el directorio actual)
-APPIMAGE_FILE=$(ls Frescobaldi-*.AppImage 2>/dev/null | head -n1)
+# Buscar el AppImage generado (python-appimage lo deja en el directorio actual)
+APPIMAGE_FILE=$(ls "$PROJECT_DIR"/Frescobaldi-*.AppImage 2>/dev/null | head -n1)
 [[ -z "$APPIMAGE_FILE" ]] && die "No se generó el AppImage"
 
 APPIMAGE_FINAL="frescobaldi-${VER}-qt6-x86_64.AppImage"
@@ -225,13 +221,13 @@ fi
 #===============================================================================
 # RESULTADO FINAL
 #===============================================================================
-header " RESULTADO FINAL"
+header "🎉 RESULTADO FINAL"
 if [[ -f "$APPIMAGE_FINAL" ]]; then
     log "¡ÉXITO! AppImage autocontenido listo:"
-    echo "   📦 $(basename "$APPIMAGE_FINAL")"
+    echo "    $(basename "$APPIMAGE_FINAL")"
     echo "   📍 $(pwd)/$APPIMAGE_FINAL"
     echo "   🔧 Tamaño: $(du -h "$APPIMAGE_FINAL" | cut -f1)"
-    echo "    Incluye: Python ${PYTHON_VERSION}, PyQt6, qpageview, python-ly"
+    echo "   🐍 Incluye: Python 3.13, PyQt6, qpageview, python-ly"
     [[ -f "${APPIMAGE_FINAL}.asc" ]] && echo "   🔐 Firma: $(basename "${APPIMAGE_FINAL}.asc")"
     echo ""
     echo "▶  Para ejecutar:"
