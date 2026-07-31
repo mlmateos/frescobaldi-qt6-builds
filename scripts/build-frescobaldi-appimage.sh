@@ -169,7 +169,7 @@ exec python3 -m frescobaldi "$@"
 WRAPPER_EOF
 chmod +x "$APPDIR/usr/bin/frescobaldi"
 
-# 3. Crear archivo .desktop CORRECTO (categorías válidas)
+# 3. Crear archivo .desktop CORRECTO (categorías válidas según freedesktop.org)
 log "Creando archivo .desktop..."
 cat > "$APPDIR/frescobaldi.desktop" << 'DESKTOP_EOF'
 [Desktop Entry]
@@ -178,7 +178,7 @@ Comment=LilyPond sheet music editor
 Exec=frescobaldi %F
 Icon=frescobaldi
 Type=Application
-Categories=AudioVideo;Music;Qt;
+Categories=AudioVideo;Music;
 MimeType=text/x-lilypond;
 DESKTOP_EOF
 cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
@@ -200,31 +200,15 @@ if [[ -n "$PKG_DIR" ]] && [[ -d "$PKG_DIR" ]]; then
 fi
 
 #===============================================================================
-# EMPAQUETADO CON PYTHON-APPIMAGE (estándar para PyQt6)
+# EMPAQUETADO DIRECTO CON APPIMAGETOOL
 #===============================================================================
-header "🚀 GENERANDO APPIMAGE CON PYTHON-APPIMAGE"
-
-# Instalar python-appimage si no existe
-if ! command -v python-appimage >/dev/null 2>&1; then
-    log "Instalando python-appimage..."
-    python3 -m pip install --break-system-packages python-appimage || die "No se pudo instalar python-appimage"
-fi
+header "🚀 GENERANDO APPIMAGE CON APPIMAGETOOL"
 
 cd "$PROJECT_DIR"
 
-# Crear el AppImage usando python-appimage
-log "Generando AppImage..."
-python-appimage build app \
-    --name "Frescobaldi" \
-    --comment "LilyPond sheet music editor" \
-    --exec "frescobaldi" \
-    --icon "$APPDIR/frescobaldi.png" \
-    --categories "AudioVideo;Music;Qt;" \
-    --python-version 3.13 \
-    --requirements <(echo "qpageview
-python-ly") \
-    "$APPDIR/usr/lib/python3/dist-packages" \
-    || die "python-appimage falló"
+# Generar AppImage directamente con ARCH explícito
+log "Generando AppImage con appimagetool..."
+ARCH=x86_64 "$TOOLS_DIR/appimagetool-x86_64.AppImage" AppDir || die "appimagetool falló"
 
 cd ..
 
@@ -263,7 +247,7 @@ fi
 #===============================================================================
 # RESULTADO FINAL
 #===============================================================================
-header "🎉 RESULTADO FINAL"
+header " RESULTADO FINAL"
 if [[ -f "$APPIMAGE_FINAL" ]]; then
     log "¡ÉXITO! AppImage listo:"
     echo "   📦 $(basename "$APPIMAGE_FINAL")"
