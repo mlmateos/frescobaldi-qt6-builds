@@ -183,11 +183,37 @@ MimeType=text/x-lilypond;
 DESKTOP_EOF
 cp "$APPDIR/frescobaldi.desktop" "$APPDIR/usr/share/applications/"
 
-# Copiar icono
-ICON_SRC=$(find "$PROJECT_DIR" -name "frescobaldi.png" -o -name "frescobaldi.svg" | head -n 1)
-if [[ -n "$ICON_SRC" ]]; then
-    cp "$ICON_SRC" "$APPDIR/frescobaldi.png"
-    cp "$ICON_SRC" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+# Copiar icono (buscar en múltiples ubicaciones típicas)
+log "Buscando ícono de Frescobaldi..."
+ICON_FOUND=false
+
+# Intentar múltiples nombres y ubicaciones comunes
+for ICON_PATH in \
+    "$PROJECT_DIR/frescobaldi.png" \
+    "$PROJECT_DIR/frescobaldi.svg" \
+    "$PROJECT_DIR/icons/frescobaldi.png" \
+    "$PROJECT_DIR/icons/frescobaldi.svg" \
+    "$PROJECT_DIR/frescobaldi_app/icons/frescobaldi.png" \
+    "$PROJECT_DIR/frescobaldi_app/icons/frescobaldi.svg"; do
+    if [[ -f "$ICON_PATH" ]]; then
+        log "✅ Ícono encontrado: $ICON_PATH"
+        cp "$ICON_PATH" "$APPDIR/frescobaldi.png"
+        cp "$ICON_PATH" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+        ICON_FOUND=true
+        break
+    fi
+done
+
+# Si no se encontró, descargar desde el repositorio oficial
+if [[ "$ICON_FOUND" == false ]]; then
+    log "⚠️  Ícono no encontrado, descargando desde GitHub..."
+    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/main/frescobaldi_app/icons/frescobaldi.svg" \
+        -O "$APPDIR/frescobaldi.png" || \
+    wget -q "https://raw.githubusercontent.com/frescobaldi/frescobaldi/4.0.7/frescobaldi_app/icons/frescobaldi.svg" \
+        -O "$APPDIR/frescobaldi.png" || \
+    die "No se pudo descargar el ícono"
+    cp "$APPDIR/frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/frescobaldi.png"
+    log "✅ Ícono descargado y colocado"
 fi
 
 # 4. Optimización -OO (MANTENEMOS TODOS LOS IDIOMAS)
