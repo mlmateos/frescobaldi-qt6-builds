@@ -10,7 +10,7 @@ Custom, optimized builds of [Frescobaldi](https://github.com/frescobaldi/frescob
 
 ### ✨ Features
 - 🎨 **PyQt6 / Qt 6.8.x LTS** — Modern UI/UX with long-term stability.
-- ⚡ **Optimization** — Python bytecode optimized (`-OO`) to remove docstrings while keeping all translations for international users.
+- ⚡ **Optimization** — Python bytecode optimized (`-OO`) to remove docstrings.
 - 🔐 **GPG-signed packages** — Cryptographic security verification for all releases and repository metadata.
 - 📦 **Two distribution methods**: `.deb` packages for Debian/Ubuntu-based distributions, and `AppImage` for any Linux distribution.
 - 🛠️ **Automated build scripts** — Compile your own optimized version easily.
@@ -134,7 +134,7 @@ Both build scripts support the following options for consistency with your workf
 - 🏷️ Detect version from git tags
 - 🛠️ Apply custom patches (Add custom credits to the About dialog)
 - 🔨 Build Python wheel and package the result (`.deb` or `AppImage`)
-- ⚡ Python bytecode optimized (`-OO`) to remove docstrings while keeping all translations for international users.
+- ⚡ Python bytecode optimized (`-OO`) to remove docstrings.
 - 🔐 Sign with GPG (if `--sign`)
 - 🌐 Publish to GitHub Releases (if `--publish`)
 - 🗄️ Update APT repository with proper branch classification (`.deb` only)
