@@ -60,6 +60,9 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/frescob
 #### Step 3: Install Frescobaldi
 ```bash
 sudo apt update
+# Install Prerequisites: Before installing, ensure your system has the required PyQt6 dependencies to avoid missing module errors:
+sudo apt install python3-pyqt6 python3-pyqt6.qtsvg python3-pyqt6.qtwidgets python3-pyqt6.qtprintsupport python3-pyqt6.qtwebengine python3-pyqt6.qtpdf lilypond
+
 sudo apt install frescobaldi
 ```
 
@@ -81,7 +84,9 @@ sudo rm /etc/apt/sources.list.d/frescobaldi-qt6-builds.list
 If you prefer not to use the APT repository:
 1. Go to [Releases](https://github.com/mlmateos/frescobaldi-qt6-builds/releases)
 2. Download the latest `frescobaldi-*-qt6-all.deb`
-3. Install with: `sudo apt install ./frescobaldi-*-qt6-all.deb`
+3. Install Prerequisites: Before installing the package, ensure your system has the required PyQt6 dependencies to avoid missing module errors:
+`sudo apt install python3-pyqt6 python3-pyqt6.qtsvg python3-pyqt6.qtwidgets python3-pyqt6.qtprintsupport python3-pyqt6.qtwebengine python3-pyqt6.qtpdf lilypond`
+4. Install with: `sudo apt install ./frescobaldi-*-qt6-all.deb`
 
 #### Method 2: AppImage (Portable)
 For a portable version that works on any Linux distribution (no installation required):
