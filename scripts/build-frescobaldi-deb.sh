@@ -144,11 +144,11 @@ fi
 header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
-# Pre-calcular las dependencias
+# Pre-calcular las dependencias (incluyendo qtsvg, qtwidgets y qtprintsupport)
 if [[ "$ENABLE_POPPLER" == true ]]; then
-    DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)"
+DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwidgets, python3-pyqt6.qtprintsupport, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)"
 else
-    DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, lilypond (>= 2.24)"
+DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwidgets, python3-pyqt6.qtprintsupport, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, lilypond (>= 2.24)"
 fi
 
 cat <<EOF > "$PROJECT_DIR/debian/control"
