@@ -126,27 +126,33 @@ else
 warn "⚠️ No se encontró about.py"
 fi
 #===============================================================================
-# PARCHE: ACTUALIZAR PESTAÑA "VERSION"
+# PARCHE: ACTUALIZAR PESTAÑA "VERSION" EN EL DIÁLOGO ABOUT
 #===============================================================================
 header "🔧 ACTUALIZANDO PESTAÑA VERSION"
 log "Parcheando información de versión..."
+
 ABOUT_FILE=$(find "$PROJECT_DIR" -name "about.py" | grep -v test | head -n 1)
 if [[ -n "$ABOUT_FILE" && -f "$ABOUT_FILE" ]]; then
-python3 - "$ABOUT_FILE" << 'PYTHON'
+    python3 - "$ABOUT_FILE" << 'PYTHON'
 import sys, re
+
 about_file_path = sys.argv[1]
 with open(about_file_path, 'r') as f:
-content = f.read()
+    content = f.read()
+
+# Patrón exacto encontrado en el código fuente de Frescobaldi
 old_version_class = r'''class Version\(QTextBrowser\):
-"""Version information\."""
-def __init__\(self, parent=None\):
-super\(\).__init__\(parent\)
-self\.setPlainText\(debuginfo\.version_info_string\(\)\)'''
+    """Version information\."""
+    def __init__\(self, parent=None\):
+        super\(\).__init__\(parent\)
+        self\.setPlainText\(debuginfo\.version_info_string\(\)\)'''
+
+# Nuestra versión personalizada
 new_version_class = '''class Version(QTextBrowser):
-"""Version information."""
-def __init__(self, parent=None):
-super().__init__(parent)
-custom_version_info = """Frescobaldi: 4.0.7
+    """Version information."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        custom_version_info = """Frescobaldi: 4.0.7
 Extension API: 0.9.0
 Python: 3.13
 python-ly: 0.9.10
@@ -155,18 +161,20 @@ PyQt: 6.8.x LTS
 qpageview: 1.0.5
 OS: Linux
 Installation kind: Custom build from https://github.com/mlmateos/frescobaldi-qt6-builds"""
-self.setPlainText(custom_version_info)'''
+        self.setPlainText(custom_version_info)'''
+
 new_content = re.sub(old_version_class, new_version_class, content)
+
 if new_content != content:
-with open(about_file_path, 'w') as f:
-f.write(new_content)
-print("✅ Version tab patched successfully.")
+    with open(about_file_path, 'w') as f:
+        f.write(new_content)
+    print("✅ Version tab patched successfully.")
 else:
-print("⚠️ No se encontró el patrón exacto para parchear Version.")
+    print("⚠️ No se encontró el patrón exacto para parchear Version.")
 PYTHON
-log "✅ Pestaña Version actualizada"
+    log "✅ Pestaña Version actualizada"
 else
-warn "⚠️ No se encontró about.py"
+    warn "⚠️ No se encontró about.py"
 fi
 #===============================================================================
 # CONSTRUCCIÓN DEL APPIMAGE AUTOCONTENIDO CON PYINSTALLER
@@ -214,4 +222,107 @@ def create_png(filename, width=256, height=256, color=(0, 120, 215)):
 def chunk(chunk_type, data):
 c = chunk_type + data
 return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-with open(filename, 'wb') as
+with open(filename, 'wb') as f:
+f.write(b'\x89PNG\r\n\x1a\n')
+f.write(chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)))
+raw = b''
+for y in range(height):
+raw += b'\x00'
+for x in range(width):
+raw += bytes(color)
+f.write(chunk(b'IDAT', zlib.compress(raw)))
+f.write(chunk(b'IEND', b''))
+create_png('$APPDIR/org.frescobaldi.Frescobaldi.png')
+"
+cp "$APPDIR/org.frescobaldi.Frescobaldi.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.png"
+log "✅ Placeholder creado"
+fi
+fi
+fi
+# Paso 4: Crear entorno virtual e instalar dependencias con PyInstaller
+log "Creando entorno virtual para PyInstaller..."
+python3 -m venv "$PROJECT_DIR/venv"
+source "$PROJECT_DIR/venv/bin/activate"
+log "Instalando dependencias en el venv..."
+pip install --upgrade pip
+pip install PyQt6 PyQt6-Qt6 PyQt6-sip qpageview python-ly
+pip install "$PROJECT_DIR/dist/"*.whl 2>/dev/null || {
+python3 -m build --wheel -o "$PROJECT_DIR/dist/" "$PROJECT_DIR"
+pip install "$PROJECT_DIR/dist/"*.whl
+}
+pip install pyinstaller
+# Paso 5: Usar PyInstaller para empaquetar todo
+log "Ejecutando PyInstaller para empaquetar Frescobaldi y todas sus dependencias..."
+pyinstaller --noconfirm --onedir \
+--name frescobaldi \
+--distpath "$APPDIR/usr/bin" \
+--workpath "$PROJECT_DIR/build" \
+--specpath "$PROJECT_DIR" \
+--collect-all frescobaldi \
+--collect-all qpageview \
+--collect-all ly \
+"$PROJECT_DIR/venv/bin/frescobaldi"
+# Desactivar venv
+deactivate
+# Asegurar que el binario sea ejecutable
+chmod +x "$APPDIR/usr/bin/frescobaldi/frescobaldi"
+# Paso 6: Crear script AppRun en la raíz del AppDir
+log "Creando AppRun..."
+cat > "$APPDIR/AppRun" << 'APPRUN_EOF'
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/frescobaldi/frescobaldi" "$@"
+APPRUN_EOF
+chmod +x "$APPDIR/AppRun"
+# Paso 7: Generar AppImage final con appimagetool
+log "Generando AppImage final con appimagetool..."
+cd "$PROJECT_DIR"
+ARCH=x86_64 "$TOOLS_DIR/appimagetool-x86_64.AppImage" "$APPDIR" || die "appimagetool falló"
+cd ..
+# Buscar el AppImage generado
+APPIMAGE_FILE=$(ls "$PROJECT_DIR"/Frescobaldi-*.AppImage 2>/dev/null | head -n1)
+[[ -z "$APPIMAGE_FILE" ]] && die "No se generó el AppImage"
+APPIMAGE_FINAL="frescobaldi-${VER}-qt6-x86_64.AppImage"
+mv -f "$APPIMAGE_FILE" "$APPIMAGE_FINAL"
+sha256sum "$APPIMAGE_FINAL" > SHA256SUMS-APPIMAGE.txt
+# Paso 8: Firma GPG
+if [[ "$SIGN" == true ]]; then
+header " FIRMANDO CON GPG"
+[[ -z "$GPG_KEY" ]] && GPG_KEY=$(gpg --list-secret-keys --keyid-format long | grep "^sec" | head -n1 | awk '{print $2}' | cut -d'/' -f2)
+gpg --default-key "$GPG_KEY" --yes --detach-sign --armor "$APPIMAGE_FINAL"
+log "✅ Firma generada: ${APPIMAGE_FINAL}.asc"
+fi
+#===============================================================================
+# PUBLICACIÓN EN GITHUB
+#===============================================================================
+if [[ "$PUBLISH" == true ]]; then
+header "🌐 PUBLICANDO EN GITHUB RELEASES"
+gh auth status >/dev/null 2>&1 || die "No autenticado en GitHub CLI"
+FULL_REPO="${GITHUB_USER}/${REPO_NAME}"
+UPLOAD_FILES=("$APPIMAGE_FINAL" "SHA256SUMS-APPIMAGE.txt")
+[[ -f "${APPIMAGE_FINAL}.asc" ]] && UPLOAD_FILES+=("${APPIMAGE_FINAL}.asc")
+if gh release view "v${VER}" --repo "$FULL_REPO" >/dev/null 2>&1; then
+gh release upload "v${VER}" --clobber --repo "$FULL_REPO" "${UPLOAD_FILES[@]}"
+log "✅ AppImage AÑADIDO a la release existente"
+else
+log "ℹ️  La release v${VER} no existe, créala primero con el script .deb"
+fi
+fi
+#===============================================================================
+# RESULTADO FINAL
+#===============================================================================
+header "🎉 RESULTADO FINAL"
+if [[ -f "$APPIMAGE_FINAL" ]]; then
+log "¡ÉXITO! AppImage autocontenido listo:"
+echo "   📦 $(basename "$APPIMAGE_FINAL")"
+echo "   📍 $(pwd)/$APPIMAGE_FINAL"
+echo "   🔧 Tamaño: $(du -h "$APPIMAGE_FINAL" | cut -f1)"
+echo "   🐍 Incluye: Python, PyQt6, qpageview, python-ly (PyInstaller)"
+[[ -f "${APPIMAGE_FINAL}.asc" ]] && echo "   🔐 Firma: $(basename "${APPIMAGE_FINAL}.asc")"
+echo ""
+echo "▶  Para ejecutar:"
+echo "   chmod +x $APPIMAGE_FINAL && ./$APPIMAGE_FINAL"
+else
+die "No se generó el AppImage correctamente"
+fi
+log "✅ Proceso completado."
