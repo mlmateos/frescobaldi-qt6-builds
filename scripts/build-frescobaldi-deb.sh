@@ -142,7 +142,7 @@ fi
 # PARCHE: ACTUALIZAR PESTAÑA "VERSION" EN EL DIÁLOGO ABOUT
 #===============================================================================
 header "🔧 ACTUALIZANDO PESTAÑA VERSION"
-log "Parcheando información de versión y método de instalación..."
+log "Parcheando información de versión..."
 
 ABOUT_FILE=$(find "$PROJECT_DIR" -name "about.py" | grep -v test | head -n 1)
 if [[ -n "$ABOUT_FILE" && -f "$ABOUT_FILE" ]]; then
@@ -153,21 +153,41 @@ about_file_path = sys.argv[1]
 with open(about_file_path, 'r') as f:
     content = f.read()
 
-# Reemplazar versiones específicas (usando regex para encontrar los f-strings)
-content = re.sub(r'text\.append\(f"Python: \{platform\.python_version\(\)\}"\)', 'text.append("Python: 3.13")', content)
-content = re.sub(r'text\.append\(f"Qt: \{[^}]+\}"\)', 'text.append("Qt: 6.8.x LTS")', content)
-content = re.sub(r'text\.append\(f"PyQt: \{[^}]+\}"\)', 'text.append("PyQt: 6.8.x LTS")', content)
+# Patrón exacto encontrado en el código fuente de Frescobaldi
+old_version_class = r'''class Version\(QTextBrowser\):
+    """Version information\."""
+    def __init__\(self, parent=None\):
+        super\(\).__init__\(parent\)
+        self\.setPlainText\(debuginfo\.version_info_string\(\)\)'''
 
-# Reemplazar el método de instalación
-content = re.sub(r'text\.append\(f"Installation kind: \{[^}]+\}"\)', 'text.append("Installation kind: Custom build from https://github.com/mlmateos/frescobaldi-qt6-builds")', content)
+# Nuestra versión personalizada
+new_version_class = '''class Version(QTextBrowser):
+    """Version information."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        custom_version_info = """Frescobaldi: 4.0.7
+Extension API: 0.9.0
+Python: 3.13
+python-ly: 0.9.10
+Qt: 6.8.x LTS
+PyQt: 6.8.x LTS
+qpageview: 1.0.5
+OS: Linux
+Installation kind: Custom build from https://github.com/mlmateos/frescobaldi-qt6-builds"""
+        self.setPlainText(custom_version_info)'''
 
-with open(about_file_path, 'w') as f:
-    f.write(content)
-print("✅ Version tab patched successfully.")
+new_content = re.sub(old_version_class, new_version_class, content)
+
+if new_content != content:
+    with open(about_file_path, 'w') as f:
+        f.write(new_content)
+    print("✅ Version tab patched successfully.")
+else:
+    print("⚠️ No se encontró el patrón exacto para parchear Version.")
 PYTHON
     log "✅ Pestaña Version actualizada"
 else
-    warn "⚠️ No se encontró about.py para parchear la pestaña Version"
+    warn "⚠️ No se encontró about.py"
 fi
 
 #===============================================================================
