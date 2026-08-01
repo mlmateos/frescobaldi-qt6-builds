@@ -3,12 +3,12 @@ Version: 4.0.7-1
 Architecture: all
 Maintainer: Manuel Mateos <manuel@mateos.dev>
 Installed-Size: 19794
-Depends: python3, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)
+Depends: python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwidgets, python3-pyqt6.qtprintsupport, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)
 Filename: pool/frescobaldi-4.0.7-qt6-all.deb
-Size: 6476932
-MD5sum: 4445b3392ae31abda6a7ef9eb816f7be
-SHA1: 8d6fb4da0bb99178e92563ca2adaa42cf618dbe4
-SHA256: b6039c47aaefa89a09819fc6b987646abdebffd90502fa308baad1ff456220d6
+Size: 6477292
+MD5sum: dfae78cc3188b5a9db58cc1ec5f6232f
+SHA1: 2fe7935c18f0257d60342c487e74f42f5dc18147
+SHA256: 5555b9044c3a253cc83313da66fc44e0788104485152bdfd284e7ccd56f96ade
 Section: editors
 Priority: optional
 Homepage: https://www.frescobaldi.org/
