@@ -79,7 +79,11 @@ cd ..
 header "📥 PREPARANDO CÓDIGO FUENTE"
 PROJECT_DIR="$(pwd)/frescobaldi-appimage"
 if [[ "$CLEAN_BUILD" == true ]]; then
-[[ "$KEEP_SOURCE" == true ]] && rm -rf "$PROJECT_DIR/AppDir" "$PROJECT_DIR"/*.AppImage || rm -rf "$PROJECT_DIR"
+    if [[ "$KEEP_SOURCE" == true ]]; then
+        rm -rf "$PROJECT_DIR/AppDir" "$PROJECT_DIR/venv" "$PROJECT_DIR/build" "$PROJECT_DIR"/*.AppImage
+    else
+        rm -rf "$PROJECT_DIR"
+    fi
 fi
 if [[ ! -d "$PROJECT_DIR/.git" ]]; then
 log "Clonando repositorio (rama: $BRANCH)..."

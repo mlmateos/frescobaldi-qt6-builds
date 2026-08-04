@@ -91,6 +91,14 @@ For a portable version that works on any Linux distribution (no installation req
    chmod +x frescobaldi-*.AppImage
    ./frescobaldi-*.AppImage
    ```
+### 📋 Compatibilidad del AppImage
+
+El AppImage está optimizado para distribuciones modernas:
+
+- ✅ **Compatible con:** Debian 13+, Ubuntu 24.04+, Fedora 41+, Arch Linux, openSUSE Tumbleweed (glibc ≥ 2.38)
+- ❌ **No compatible con:** Debian 12, Ubuntu ≤23.10, Fedora ≤40, RHEL 9 (glibc antiguo)
+
+Para distribuciones más antiguas, use el paquete `.deb` con el repositorio APT firmado.
 
 ---
 
