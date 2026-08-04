@@ -239,7 +239,42 @@ log "✅ Placeholder creado"
 fi
 fi
 fi
-# Paso 4: Crear entorno virtual e instalar dependencias con PyInstaller
+#===============================================================================
+# PASO 4: AÑADIR METAINFO APPSTREAM (para AppImageHub / catálogos)
+#===============================================================================
+
+log "Creando archivo AppStream metainfo para catálogos..."
+
+mkdir -p "$APPDIR/usr/share/metainfo"
+
+cat > "$APPDIR/usr/share/metainfo/org.frescobaldi.Frescobaldi.metainfo.xml" << 'METAINFO_EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.frescobaldi.Frescobaldi</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Frescobaldi</name>
+  <summary>LilyPond sheet music editor (PyQt6 / Qt 6.8.x LTS optimized build)</summary>
+  <description>
+    <p>Frescobaldi is a LilyPond sheet music editor with many powerful features for entering and editing LilyPond music scores.</p>
+    <p>This is a custom optimized build with PyQt6 / Qt 6.8.x LTS, Python 3.13 and GPG-signed releases.</p>
+  </description>
+  <launchable type="desktop-id">org.frescobaldi.Frescobaldi.desktop</launchable>
+  <url type="homepage">https://frescobaldi.org</url>
+  <url type="bugtracker">https://github.com/frescobaldi/frescobaldi/issues</url>
+  <url type="help">https://frescobaldi.org/help</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Frescobaldi compiling the Ode to Joy</caption>
+      <image>https://raw.githubusercontent.com/mlmateos/frescobaldi-qt6-builds/main/screenshots/frescobaldi-screenshot.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+</component>
+METAINFO_EOF
+
+log "✅ Archivo metainfo creado en $APPDIR/usr/share/metainfo/"
+# Paso 5: Crear entorno virtual e instalar dependencias con PyInstaller
 log "Creando entorno virtual para PyInstaller..."
 python3 -m venv "$PROJECT_DIR/venv"
 source "$PROJECT_DIR/venv/bin/activate"
@@ -251,7 +286,7 @@ python3 -m build --wheel -o "$PROJECT_DIR/dist/" "$PROJECT_DIR"
 pip install "$PROJECT_DIR/dist/"*.whl
 }
 pip install pyinstaller
-# Paso 5: Usar PyInstaller para empaquetar todo
+# Paso 6: Usar PyInstaller para empaquetar todo
 log "Ejecutando PyInstaller para empaquetar Frescobaldi y todas sus dependencias..."
 pyinstaller --noconfirm --onedir \
 --name frescobaldi \
@@ -266,7 +301,7 @@ pyinstaller --noconfirm --onedir \
 deactivate
 # Asegurar que el binario sea ejecutable
 chmod +x "$APPDIR/usr/bin/frescobaldi/frescobaldi"
-# Paso 6: Crear script AppRun en la raíz del AppDir
+# Paso 7: Crear script AppRun en la raíz del AppDir
 log "Creando AppRun..."
 cat > "$APPDIR/AppRun" << 'APPRUN_EOF'
 #!/bin/sh
@@ -274,7 +309,7 @@ HERE="$(dirname "$(readlink -f "$0")")"
 exec "$HERE/usr/bin/frescobaldi/frescobaldi" "$@"
 APPRUN_EOF
 chmod +x "$APPDIR/AppRun"
-# Paso 7: Generar AppImage final con appimagetool
+# Paso 8: Generar AppImage final con appimagetool
 log "Generando AppImage final con appimagetool..."
 cd "$PROJECT_DIR"
 ARCH=x86_64 "$TOOLS_DIR/appimagetool-x86_64.AppImage" "$APPDIR" || die "appimagetool falló"
