@@ -1,0 +1,15 @@
+# Build artifacts
+scripts/*.AppImage
+scripts/*.AppImage.asc
+scripts/*.deb
+scripts/*.deb.asc
+scripts/*.buildinfo
+scripts/*.changes
+scripts/SHA256SUMS-*.txt
+scripts/*.log
+scripts/frescobaldi-appimage/
+scripts/frescobaldi-deb/
+scripts/appimage-tools/
+
+# Temporary files
+scripts/.compat-metainfo.xml
