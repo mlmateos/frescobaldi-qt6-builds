@@ -260,9 +260,11 @@ cat > "$APPDIR/usr/share/metainfo/org.frescobaldi.Frescobaldi.metainfo.xml" << '
     <p>This is a custom optimized build with PyQt6 / Qt 6.8.x LTS, Python 3.13 and GPG-signed releases.</p>
   </description>
   <launchable type="desktop-id">org.frescobaldi.Frescobaldi.desktop</launchable>
-  <url type="homepage">https://frescobaldi.org</url>
-  <url type="bugtracker">https://github.com/frescobaldi/frescobaldi/issues</url>
-  <url type="help">https://frescobaldi.org/help</url>
+<url type="homepage">https://frescobaldi.org</url>
+<url type="bugtracker">https://github.com/frescobaldi/frescobaldi/issues</url>
+<developer id="frescobaldi.org">
+  <name>Frescobaldi developers</name>
+</developer>
   <screenshots>
     <screenshot type="default">
       <caption>Frescobaldi compiling the Ode to Joy</caption>
