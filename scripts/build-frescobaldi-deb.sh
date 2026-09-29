@@ -191,18 +191,19 @@ else
 fi
 
 #===============================================================================
-# GENERACIÓN DE ESTRUCTURA DEBIAN
+# GENERACIÓN DE ESTRUCTURA DEBIAN (MÉTODO INFALIBLE CON PYTHON PARA TABS)
 #===============================================================================
 header "📦 GENERANDO ESTRUCTURA DEBIAN"
 mkdir -p "$PROJECT_DIR/debian/source"
 
-# Pre-calcular las dependencias (qtsvg es el único subpaquete extra necesario)
+# Pre-calcular las dependencias
 if [[ "$ENABLE_POPPLER" == true ]]; then
 DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)"
 else
 DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, lilypond (>= 2.24)"
 fi
 
+# 1. debian/control
 cat <<EOF > "$PROJECT_DIR/debian/control"
 Source: frescobaldi
 Section: editors
@@ -226,7 +227,7 @@ Description: LilyPond sheet music text editor (Optimized PyQt6 Build)
  * Python bytecode optimized (-OO) for smaller footprint
 EOF
 
-# 1. Crear el wrapper de forma 100% segura (sin escapes de bash)
+# 2. Wrapper
 cat > "$PROJECT_DIR/frescobaldi-wrapper.sh" << 'WRAPPER_EOF'
 #!/usr/bin/env python3
 import sys
@@ -236,83 +237,90 @@ sys.exit(main())
 WRAPPER_EOF
 chmod +x "$PROJECT_DIR/frescobaldi-wrapper.sh"
 
-# 2. Generar debian/rules (ahora solo copia el wrapper, cero escapes)
-cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
-#!/usr/bin/make -f
+# 3. Script de parcheo Python 3.14
+cat > "$PROJECT_DIR/patch-python314.sh" << 'PATCHEOF'
+#!/usr/bin/env bash
+TARGET_DIR="debian/frescobaldi/usr/lib/python3/dist-packages"
+LINK_FILE=$(find "$TARGET_DIR" -path "*/qpageview/link.py" 2>/dev/null | head -n 1)
+if [[ -f "$LINK_FILE" ]]; then
+python3 - "$LINK_FILE" << 'PYTHON'
+import sys, re
+with open(sys.argv[1], 'r', encoding='utf-8') as f: content = f.read()
+if "from PyQt6.QtCore import QSize, QPoint" in content and "QUrl" not in content:
+    content = content.replace("from PyQt6.QtCore import QSize, QPoint", "from PyQt6.QtCore import QSize, QPoint, QUrl")
+content = re.sub(r'QDesktopServices\.openUrl\((\w+)\)', r'QDesktopServices.openUrl(QUrl(\1) if isinstance(\1, str) else \1)', content)
+with open(sys.argv[1], 'w', encoding='utf-8') as f: f.write(content)
+PYTHON
+echo "✅ qpageview/link.py parcheado"
+fi
+PATCHEOF
+chmod +x "$PROJECT_DIR/patch-python314.sh"
+
+# 4. Generar debian/rules USANDO PYTHON (Garantiza TABS reales, imposible de corromper)
+# Pasamos $PROJECT_DIR como argumento para que Python use la ruta absoluta
+python3 - "$PROJECT_DIR" << 'PYEOF'
+import sys
+project_dir = sys.argv[1]
+rules_content = """#!/usr/bin/make -f
 export DH_VERBOSE = 1
 %:
-	dh $@
+\tdh $@
 
 override_dh_auto_build:
-	python3 -m build --wheel
+\tpython3 -m build --wheel
 
 override_dh_auto_install:
-	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
-	mkdir -p debian/frescobaldi/usr/bin
-	cp $(CURDIR)/frescobaldi-wrapper.sh debian/frescobaldi/usr/bin/frescobaldi
-	chmod +x debian/frescobaldi/usr/bin/frescobaldi
-	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
-	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then find "$$PKG_DIR/locale" -type f -name "*.mo" 2>/dev/null | grep -vE "es_ES|es_MX|en_US|en_GB|fr_FR" | xargs rm -f || true; python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi
+\tpython3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
+\tpython3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages qpageview python-ly
+\tmkdir -p debian/frescobaldi/usr/bin
+\tif [ -f debian/frescobaldi/usr/lib/python3/dist-packages/bin/frescobaldi ]; then \\
+\t\tmv debian/frescobaldi/usr/lib/python3/dist-packages/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi; \\
+\t\tchmod +x debian/frescobaldi/usr/bin/frescobaldi; \\
+\t\trmdir debian/frescobaldi/usr/lib/python3/dist-packages/bin 2>/dev/null || true; \\
+\tfi
+\tmkdir -p debian/frescobaldi/usr/share/applications
+\tinstall -m 0644 frescobaldi.desktop debian/frescobaldi/usr/share/applications/org.frescobaldi.Frescobaldi.desktop
+\tmkdir -p debian/frescobaldi/usr/share/icons/hicolor/256x256/apps
+\tICON_SRC=$$(find debian/frescobaldi/usr/lib/python3/dist-packages/frescobaldi -type f \\( -name 'org.frescobaldi.Frescobaldi.svg' -o -name 'frescobaldi.svg' -o -name 'frescobaldi.png' \\) 2>/dev/null | head -n 1); if [ -n \"$$ICON_SRC\" ] && [ -f \"$$ICON_SRC\" ]; then cp \"$$ICON_SRC\" debian/frescobaldi/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.svg; else wget -q 'https://raw.githubusercontent.com/frescobaldi/frescobaldi/v4.0.7/frescobaldi_app/icons/org.frescobaldi.Frescobaldi.svg' -O debian/frescobaldi/usr/share/icons/hicolor/256x256/apps/org.frescobaldi.Frescobaldi.svg 2>/dev/null || true; fi
+
+\t./patch-python314.sh
+\tPKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name 'frescobaldi*' | grep -v dist-info | head -n 1); if [ -n \"$$PKG_DIR\" ] && [ -d \"$$PKG_DIR\" ]; then find \"$$PKG_DIR/locale\" -type f -name '*.mo' 2>/dev/null | grep -vE 'es_ES|es_MX|en_US|en_GB|fr_FR' | xargs -r rm -f || true; python3 -OO -m compileall -q \"$$PKG_DIR\" || true; fi
 
 override_dh_usrlocal:
 
 override_dh_strip:
-	dh_strip --no-automatic-dbgsym
-RULES_EOF
+\tdh_strip --no-automatic-dbgsym
+"""
+rules_path = f"{project_dir}/debian/rules"
+with open(rules_path, "w") as f:
+    f.write(rules_content.replace("\\t", "\t"))
+PYEOF
 chmod +x "$PROJECT_DIR/debian/rules"
+log "✅ debian/rules generado con TABS reales garantizados por Python en $PROJECT_DIR"
 
-log "✅ debian/rules y wrapper generados correctamente (método a prueba de balas)"
+# 3.5. Generar archivo .desktop (Fuera de debian/rules para evitar errores de Make)
+cat > "$PROJECT_DIR/frescobaldi.desktop" << 'DESKTOP_EOF'
+[Desktop Entry]
+Name=Frescobaldi
+Comment=LilyPond sheet music text editor
+Exec=frescobaldi %F
+Icon=org.frescobaldi.Frescobaldi
+Type=Application
+Categories=AudioVideo;Music;
+MimeType=text/x-lilypond;
+DESKTOP_EOF
 
+# 5. debian/changelog (con espacios iniciales correctos)
 FECHA=$(date -R)
-cat <<EOF > "$PROJECT_DIR/debian/changelog"
-frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
+printf 'frescobaldi (%s-%s) unstable; urgency=medium\n\n' "${DEB_VER}" "${PKG_REVISION}" > "$PROJECT_DIR/debian/changelog"
+printf '  * Custom optimized build from upstream tag %s.\n' "${VER_GIT}" >> "$PROJECT_DIR/debian/changelog"
+printf '  * PyQt6, locale pruning, Python -OO bytecode optimization.\n' >> "$PROJECT_DIR/debian/changelog"
+printf '  * Fixed executable placement (/usr/bin), .desktop and icon installation.\n' >> "$PROJECT_DIR/debian/changelog"
+printf '  * Added Python 3.14 / PyQt6 6.8 compatibility patches.\n\n' >> "$PROJECT_DIR/debian/changelog"
+printf ' -- Manuel Mateos <manuel@mateos.dev>  %s\n' "${FECHA}" >> "$PROJECT_DIR/debian/changelog"
+log "✅ debian/changelog generado con formato Debian válido"
 
-  * Custom optimized build from upstream tag ${VER_GIT}.
-  * PyQt6, locale pruning, Python -OO bytecode optimization.
-  * Fixed executable wrapper generation using safe copy method.
-
- -- Manuel Mateos <manuel@mateos.dev>  ${FECHA}
-EOF
-echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
-
-# debian/rules - MANTIENE TODOS LOS IDIOMAS (solo optimización -OO)
-cat > "$PROJECT_DIR/debian/rules" << 'RULES_EOF'
-#!/usr/bin/make -f
-export DH_VERBOSE = 1
-%:
-	dh $@
-
-override_dh_auto_build:
-	python3 -m build --wheel
-
-override_dh_auto_install:
-	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
-	python3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages qpageview python-ly
-	mkdir -p debian/frescobaldi/usr/bin
-	cp $(CURDIR)/frescobaldi-wrapper.sh debian/frescobaldi/usr/bin/frescobaldi
-	chmod +x debian/frescobaldi/usr/bin/frescobaldi
-	PKG_DIR=$$(find debian/frescobaldi/usr/lib/python3/dist-packages -maxdepth 1 -type d -name "frescobaldi*" | grep -v dist-info | head -n 1)
-	if [ -n "$$PKG_DIR" ] && [ -d "$$PKG_DIR" ]; then python3 -OO -m compileall "$$PKG_DIR"; find "$$PKG_DIR" -name "*.py" -delete || true; fi
-
-override_dh_usrlocal:
-
-override_dh_strip:
-	dh_strip --no-automatic-dbgsym
-RULES_EOF
-chmod +x "$PROJECT_DIR/debian/rules"
-
-log "✅ debian/rules generado correctamente"
-
-FECHA=$(date -R)
-cat <<EOF > "$PROJECT_DIR/debian/changelog"
-frescobaldi (${DEB_VER}-${PKG_REVISION}) unstable; urgency=medium
-
-  * Custom optimized build from upstream tag ${VER_GIT}.
-  * PyQt6, locale pruning, Python -OO bytecode optimization.
-  * Fixed executable placement (/usr/bin) and dynamic package directory detection.
-
- -- Manuel Mateos <manuel@mateos.dev>  ${FECHA}
-EOF
+# 6. Source format
 echo "3.0 (quilt)" > "$PROJECT_DIR/debian/source/format"
 
 #===============================================================================
