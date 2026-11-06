@@ -103,7 +103,7 @@ header "️ DETECTANDO VERSIÓN"
 cd "$PROJECT_DIR"
 VER_GIT=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//') || VER_GIT="4.0.7"
 VER=$(echo "$VER_GIT" | sed -E 's/alpha([0-9]+)/-alpha\1/; s/beta([0-9]+)/-beta\1/; s/rc([0-9]+)/-rc\1/')
-DEB_VER=$(echo "$VER" | sed 's/-alpha/~alpha/g; s/-beta/~beta/g; s/-rc/~rc/g')
+DEB_VER=$(echo "${VER}+ds1" | sed 's/-alpha/~alpha/g; s/-beta/~beta/g; s/-rc/~rc/g')
 log "Versión final para .deb: ${DEB_VER}-${PKG_REVISION}"
 cd ..
 
