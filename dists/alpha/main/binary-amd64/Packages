@@ -4,7 +4,7 @@ Architecture: all
 Maintainer: Manuel Mateos <manuel@mateos.dev>
 Installed-Size: 23083
 Depends: python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)
-Filename: /home/manuel/frescobaldi-qt6-builds/pool/frescobaldi-4.0.7-qt6-all.deb
+Filename: ../../../../pool/frescobaldi-4.0.7-qt6-all.deb
 Size: 6604576
 MD5sum: bf3894ea9c953ebea435ae043b3fe40b
 SHA1: 0d01e5b6dbcfeb9d4cd6af0153a6854813e86f15
