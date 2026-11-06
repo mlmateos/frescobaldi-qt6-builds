@@ -198,9 +198,9 @@ mkdir -p "$PROJECT_DIR/debian/source"
 
 # Pre-calcular las dependencias
 if [[ "$ENABLE_POPPLER" == true ]]; then
-DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24)"
+DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, poppler-utils, lilypond (>= 2.24), python3-ly, python3-qpageview"
 else
-DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, lilypond (>= 2.24)"
+DEPENDS_STR="python3, python3-pyqt6, python3-pyqt6.qtsvg, python3-pyqt6.qtwebengine, python3-pyqt6.qtpdf, lilypond (>= 2.24), python3-ly, python3-qpageview"
 fi
 
 # 1. debian/control
@@ -271,7 +271,6 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 \tpython3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages dist/*.whl
-\tpython3 -m pip install --no-deps --target=debian/frescobaldi/usr/lib/python3/dist-packages qpageview python-ly
 \tmkdir -p debian/frescobaldi/usr/bin
 \tif [ -f debian/frescobaldi/usr/lib/python3/dist-packages/bin/frescobaldi ]; then \\
 \t\tmv debian/frescobaldi/usr/lib/python3/dist-packages/bin/frescobaldi debian/frescobaldi/usr/bin/frescobaldi; \\
