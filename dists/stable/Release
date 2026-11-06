@@ -2,29 +2,29 @@ Origin: mlmateos
 Label: Frescobaldi Qt6 Builds
 Suite: stable
 Codename: stable
-Date: Thu, 05 Nov 2026 20:35:03 -0600
+Date: Thu, 05 Nov 2026 20:41:16 -0600
 Architectures: amd64
 Components: main
 Description: Frescobaldi Qt6 Builds Repository (Stable)
 Acquire-By-Hash: no
-Date: Fri, 06 Nov 2026 02:35:03 +0000
+Date: Fri, 06 Nov 2026 02:41:16 +0000
 MD5Sum:
- 4ab227155e576b38a9ce09d0620eb537             2030 Release
- 3007cf7d825bd0ceb1e397e026b4aa71              889 main/binary-amd64/Packages
- 3a84b9e65f21d47fd1f9d44288f752ec              573 main/binary-amd64/Packages.gz
+ 28c9a6d90a945652bcac48407afaeaff             2030 Release
+ d9144c61bec6be6de3b48ebf04368065              893 main/binary-amd64/Packages
+ e9c7ddf6576fa37bcd2bded35f23723b              578 main/binary-amd64/Packages.gz
  60aec7a09a9d05f3d96d98c6aae55869               47 main/i18n/Translation-en.gz
 SHA1:
- ac17646790e6a8d539902dddd5e92e4b5856b6a4             2030 Release
- 6159a91537cdd5cc24a4ce9763528e7829c7893f              889 main/binary-amd64/Packages
- 3451e4cbae29d51deb1c57c8081486599aa0b96d              573 main/binary-amd64/Packages.gz
+ c2bfc4daa62d14c3290a967c5a5e43d6acb012b1             2030 Release
+ 4b6babebd2b0c6fc603c754264fdf2b2fde98f32              893 main/binary-amd64/Packages
+ f65785822b32fc05a8e483b38d3b1e5e56cf6802              578 main/binary-amd64/Packages.gz
  cd62d0196f86040100a40b66ec2fa2df91765f6f               47 main/i18n/Translation-en.gz
 SHA256:
- 00bdb8da03006b9cbdcb9df9c5c5db084aaa83e1347bfd8fac02978b67d981e0             2030 Release
- 4565e1db7865800d68fe27ea97fd1bddf67b46557c74e3898df39264d12820b0              889 main/binary-amd64/Packages
- 06f9a75e2e0aa7e381c663a08e9fd7e085c35da6afbac99ca1acd092a78b11d0              573 main/binary-amd64/Packages.gz
+ 84fa4f383d6c31dfdf920457980a791730621df5b08de736c802522d1b9a4cc8             2030 Release
+ 45843ea834c648181de4819cc16d3f8d10797654a1031949712959ab2ade0971              893 main/binary-amd64/Packages
+ e7ee928675fd2541dfef1f1598b19c809ae9bbb80b91c345076f4b60738f7d9d              578 main/binary-amd64/Packages.gz
  55cc0693ffd22340d72ceb31a84e4bf7aadf023f7e86658bc99de5b2fedbc89c               47 main/i18n/Translation-en.gz
 SHA512:
- d4eeecf0cf9163c0371f31ac548bfdc5dc21b970134365609dee2fd6ac76a7f2a7add36e8cd7a44bfd3772072e5d60b489a500241eea3afb4238638827debe3a             2030 Release
- 7c9993d0834f8252c57a8f16b9003b111434509f1eab8130db5c8c2962c91c69195e259671bfaa073f0fb9e97bca3438061d49965b1cc52b440ca8ce6d981456              889 main/binary-amd64/Packages
- 2968c166afe14bc9c9b66b7843f54a468e4615740aee176fff1492ff05e9eb246b6f9e4396894d7626fa07c20e10b27805974b5836a7233d3c9b02577c2e1156              573 main/binary-amd64/Packages.gz
+ 1288e00861b9ad525827b60ec4e09f7f5688dbaa6755ba757ef2d4a650ef0d20017a4cd0e1f146f06ac2efecb65e7ea38581809063ee0f601f0a3800ed3da35d             2030 Release
+ 357fbb5849c6d1e3a5cb5d57cc16a93337886bf42d21e0b8439c3647a906333c8b8cc02629a53c31d3029aee01eb7acd43014c71941832d3ca434e19085e8219              893 main/binary-amd64/Packages
+ 43ecc650640b247dfab748a12cdc6e61517c8cdcb5fde6f7e59381ad8eab8df9024edd7afb09ba7732e7d09362b5e51d38e5db47471e6aff05ba956b28c0808a              578 main/binary-amd64/Packages.gz
  30ca4fafc8fe62ea58f2886794809aff5ac36ff8153510b485f76d46f4ecaf85e485115c128cd411919dab34e6398fbfc53a79f184620346b28ebfc7fc07ba21               47 main/i18n/Translation-en.gz
